@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cyber">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ATTENDIFY - Smart Attendance Management System{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/images/attendify_logo.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/base.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Matrix Background -->
+    <div class="matrix-bg"></div>
+    
+    <!-- Theme Toggle -->
+    <div class="theme-toggle">
+        <button id="themeToggle" class="cyber-theme-btn" aria-label="Toggle theme">
+            <i class="fas fa-sun"></i>
+            <i class="fas fa-moon"></i>
+            <div class="theme-glow"></div>
+        </button>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="cyber-loading">
+        <div class="hologram-spinner">
+            <div class="spinner-core"></div>
+            <div class="spinner-ring"></div>
+            <i class="fas fa-fingerprint"></i>
+        </div>
+        <p class="loading-text">INITIALIZING SYSTEM...</p>
+    </div>
+
+    <!-- Notification System -->
+    <div id="notificationContainer" class="cyber-notification-container"></div>
+
+    <!-- Main Layout -->
+    {% if user.is_authenticated %}
+        <!-- Authenticated Layout -->
+        <div class="cyber-app-container">
+            <!-- Cyber Sidebar -->
+            <aside class="cyber-sidebar" id="cyberSidebar">
+                <div class="sidebar-header">
+                    <div class="hologram-logo">
+                        <div class="logo-core"></div>
+                        <div class="logo-ring"></div>
+                        <i class="fas fa-fingerprint"></i>
+                    </div>
+                    <span class="logo-text glitch" data-text="ATTENDIFY">ATTENDIFY</span>
+                    <button class="cyber-sidebar-toggle" id="cyberSidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+
+                <nav class="cyber-sidebar-nav">
+                    {% if user.is_admin %}
+                        <!-- Admin Navigation -->
+                        <div class="cyber-nav-section">
+                            <div class="nav-section-header">
+                                <i class="fas fa-server"></i>
+                                <span>ADMIN PANEL</span>
+                            </div>
+                            <a href="/admin/" class="cyber-nav-link">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>DASHBOARD</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="/admin/attendify/department/" class="cyber-nav-link">
+                                <i class="fas fa-building"></i>
+                                <span>DEPARTMENTS</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="/admin/attendify/course/" class="cyber-nav-link">
+                                <i class="fas fa-graduation-cap"></i>
+                                <span>COURSES</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="/admin/attendify/unit/" class="cyber-nav-link">
+                                <i class="fas fa-book"></i>
+                                <span>UNITS</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="/admin/attendify/lecturerprofile/" class="cyber-nav-link">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                                <span>LECTURERS</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="/admin/attendify/studentprofile/" class="cyber-nav-link">
+                                <i class="fas fa-user-graduate"></i>
+                                <span>STUDENTS</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="/admin/attendify/systemlog/" class="cyber-nav-link">
+                                <i class="fas fa-clipboard-list"></i>
+                                <span>SYSTEM LOGS</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                        </div>
+                    {% elif user.is_lecturer %}
+                        <!-- Lecturer Navigation -->
+                        <div class="cyber-nav-section">
+                            <div class="nav-section-header">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                                <span>LECTURER PANEL</span>
+                            </div>
+                            <a href="{% url 'lecturer_dashboard' %}" class="cyber-nav-link">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>DASHBOARD</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="{% url 'lecturer_portal' %}" class="cyber-nav-link">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>MY CLASSES</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="{% url 'lecturer_attendance' %}" class="cyber-nav-link">
+                                <i class="fas fa-qrcode"></i>
+                                <span>ATTENDANCE</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="{% url 'profile' %}" class="cyber-nav-link">
+                                <i class="fas fa-user-astronaut"></i>
+                                <span>PROFILE</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                        </div>
+                    {% elif user.is_student %}
+                        <!-- Student Navigation -->
+                        <div class="cyber-nav-section">
+                            <div class="nav-section-header">
+                                <i class="fas fa-user-graduate"></i>
+                                <span>STUDENT PANEL</span>
+                            </div>
+                            <a href="{% url 'student_dashboard' %}" class="cyber-nav-link">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span>DASHBOARD</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="{% url 'student_portal' %}" class="cyber-nav-link">
+                                <i class="fas fa-calendar"></i>
+                                <span>MY SCHEDULE</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="{% url 'student_portal' %}?tab=attendance" class="cyber-nav-link">
+                                <i class="fas fa-clipboard-check"></i>
+                                <span>ATTENDANCE</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                            <a href="{% url 'profile' %}" class="cyber-nav-link">
+                                <i class="fas fa-user-astronaut"></i>
+                                <span>PROFILE</span>
+                                <div class="nav-glow"></div>
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    <!-- Common Navigation -->
+                    <div class="cyber-nav-section">
+                        <div class="nav-section-header">
+                            <i class="fas fa-cog"></i>
+                            <span>SYSTEM</span>
+                        </div>
+                        <a href="{% url 'change_password' %}" class="cyber-nav-link">
+                            <i class="fas fa-key"></i>
+                            <span>SECURITY</span>
+                            <div class="nav-glow"></div>
+                        </a>
+                        <a href="{% url 'logout' %}" class="cyber-nav-link cyber-logout-link">
+                            <i class="fas fa-power-off"></i>
+                            <span>LOGOUT</span>
+                            <div class="nav-glow"></div>
+                        </a>
+                    </div>
+                </nav>
+
+                <!-- Sidebar Status -->
+                <div class="sidebar-status">
+                    <div class="status-indicator">
+                        <i class="fas fa-circle"></i>
+                        <span>SYSTEM ONLINE</span>
+                    </div>
+                    <div class="status-uptime">99.9% UPTIME</div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="cyber-main-content" id="cyberMainContent">
+                <!-- Cyber Header -->
+                <header class="cyber-header">
+                    <div class="header-left">
+                        <button class="cyber-menu-toggle" id="cyberMenuToggle">
+                            <i class="fas fa-bars"></i>
+                            <div class="menu-glow"></div>
+                        </button>
+                        <h1 class="cyber-page-title">{% block page_title %}DASHBOARD{% endblock %}</h1>
+                    </div>
+                    
+                    <div class="cyber-header-right">
+                        <div class="cyber-user-menu">
+                            <div class="user-orb">
+                                <div class="orb-glow"></div>
+                                {% if user.profile_picture %}
+                                    <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
+                                {% else %}
+                                    <div class="orb-placeholder">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                {% endif %}
+                                <div class="orb-pulse"></div>
+                            </div>
+                            <div class="cyber-user-info">
+                                <span class="user-name">{{ user.get_full_name|default:user.username|upper }}</span>
+                                <span class="user-role">
+                                    {% if user.is_admin %}SYSTEM ADMINISTRATOR{% endif %}
+                                    {% if user.is_lecturer %}LECTURER{% endif %}
+                                    {% if user.is_student %}STUDENT{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Cyber Messages -->
+                {% if messages %}
+                <div class="cyber-messages-container">
+                    {% for message in messages %}
+                    <div class="cyber-alert cyber-alert-{{ message.tags }}">
+                        <div class="alert-icon">
+                            <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                        </div>
+                        <span class="alert-message">{{ message }}</span>
+                        <button class="cyber-alert-close" onclick="this.parentElement.style.display='none'">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <div class="alert-glow"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Page Content -->
+                <div class="cyber-content-area">
+                    {% block content %}{% endblock %}
+                </div>
+
+                <!-- Footer -->
+                <footer class="cyber-content-footer">
+                    <div class="footer-info">
+                        <span>ATTENDIFY v2.0.1</span>
+                        <span class="divider">|</span>
+                        <span>SYSTEM STATUS: <span class="status-online">OPERATIONAL</span></span>
+                        <span class="divider">|</span>
+                        <span>USER: {{ user.username|upper }}</span>
+                    </div>
+                </footer>
+            </main>
+        </div>
+    {% else %}
+        <!-- Public Layout (for login page) -->
+        {% block public_content %}{% endblock %}
+    {% endif %}
+
+    <!-- Scripts -->
+    <script src="/static/js/base.js"></script>
+    {% block extra_js %}{% endblock %}
+
+    <!-- CSRF Token for AJAX -->
+    <script>
+        const CSRF_TOKEN = "{{ csrf_token }}";
+        const USER_ROLE = "{% if user.is_admin %}admin{% elif user.is_lecturer %}lecturer{% elif user.is_student %}student{% else %}public{% endif %}";
+    </script>
+</body>
+</html>
