@@ -251,51 +251,159 @@
                 </div>
             </div>
 
-            <!-- Attendance Tab -->
-            <div class="tab-content" id="attendance-tab">
-                <div class="content-grid">
-                    <!-- QR Scanner -->
-                    <div class="cyber-card full-width">
-                        <div class="card-header">
-                            <h3><i class="fas fa-camera"></i> QR ATTENDANCE SYSTEM</h3>
-                            <span class="card-badge">ENCRYPTED</span>
-                        </div>
-                        <div class="card-body">
-                            <div class="scanner-container">
-                                <div class="scanner-left">
-                                    <h4>REAL-TIME QR SCANNING</h4>
-                                    <p>Scan your lecturer's QR code to mark attendance automatically. System validates location and timing.</p>
-                                    
-                                    <div class="scanner-interface" id="qr-scanner">
-                                        <div class="scanner-frame">
-                                            <div class="scanner-lens">
-                                                <div class="scanner-laser"></div>
-                                                <div class="scanner-crosshair"></div>
-                                            </div>
-                                            <video id="qr-video" class="scanner-video" style="display: none;"></video>
-                                            <canvas id="qr-canvas" class="scanner-canvas" style="display: none;"></canvas>
-                                        </div>
-                                        
-                                        <div class="scanner-controls">
-                                            <button class="cyber-button primary" id="start-scanner">
-                                                <i class="fas fa-camera"></i>
-                                                START CAMERA SCAN
-                                            </button>
-                                            <button class="cyber-button secondary" id="upload-qr">
-                                                <i class="fas fa-upload"></i>
-                                                UPLOAD QR IMAGE
-                                            </button>
-                                            <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
-                                        </div>
-                                    </div>
-
-                                    <div class="scanner-status" id="scanner-status">
-                                        <div class="status-indicator">
-                                            <i class="fas fa-circle"></i>
-                                            <span>Scanner ready for initialization</span>
-                                        </div>
-                                    </div>
+          <!-- Attendance Tab -->
+<div class="tab-content" id="attendance-tab">
+    <div class="content-grid">
+        
+        <!-- QR Scanner -->
+        <div class="cyber-card full-width">
+            <div class="card-header">
+                <h3><i class="fas fa-camera"></i> QR ATTENDANCE SYSTEM</h3>
+                <span class="card-badge">ENCRYPTED</span>
+            </div>
+            <div class="card-body">
+                <div class="scanner-container">
+                    <div class="scanner-left">
+                        <h4>REAL-TIME QR SCANNING</h4>
+                        <p>Scan your lecturer's QR code to mark attendance automatically. System validates location and timing.</p>
+                        
+                        <div class="scanner-interface" id="qr-scanner">
+                            <div class="scanner-frame">
+                                <div class="scanner-lens">
+                                    <div class="scanner-laser"></div>
+                                    <div class="scanner-crosshair"></div>
                                 </div>
+                                <video id="qr-video" class="scanner-video" style="display: none;"></video>
+                                <canvas id="qr-canvas" class="scanner-canvas" style="display: none;"></canvas>
+                            </div>
+                            
+                            <div class="scanner-controls">
+                                <button class="cyber-button primary" id="start-scanner">
+                                    <i class="fas fa-camera"></i>
+                                    START CAMERA SCAN
+                                </button>
+                                <button class="cyber-button secondary" id="upload-qr">
+                                    <i class="fas fa-upload"></i>
+                                    UPLOAD QR IMAGE
+                                </button>
+                                <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
+                            </div>
+                        </div>
+
+                        <!-- 🔹 Manual QR Token Input -->
+                                <div class="manual-qr-input">
+                                    <h4>Or Enter Token Manually</h4>
+                                    <form id="qr-token-form">
+                                        {% csrf_token %}
+                                        <div class="form-group">
+                                            <input 
+                                                type="text" 
+                                                id="qr-token-input" 
+                                                name="qr_token" 
+                                                class="cyber-input" 
+                                                placeholder="Enter QR Token" 
+                                                required
+                                            >
+                                        </div>
+                                        <button type="submit" class="cyber-button success">
+                                            <i class="fas fa-key"></i> SUBMIT TOKEN
+                                        </button>
+                                    </form>
+                                    <div id="qr-token-status" class="status-indicator" style="margin-top:10px;"></div>
+                                </div>
+
+                                <script>
+                                document.addEventListener("DOMContentLoaded", function () {
+                                    const form = document.getElementById("qr-token-form");
+                                    const input = document.getElementById("qr-token-input");
+                                    const statusDiv = document.getElementById("qr-token-status");
+
+                                    // Helper: get CSRF token from cookie
+                                    function getCookie(name) {
+                                        let cookieValue = null;
+                                        if (document.cookie && document.cookie !== "") {
+                                            const cookies = document.cookie.split(";");
+                                            for (let i = 0; i < cookies.length; i++) {
+                                                const cookie = cookies[i].trim();
+                                                if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                                                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        return cookieValue;
+                                    }
+                                    const csrftoken = getCookie("csrftoken");
+
+                                    form.addEventListener("submit", function (e) {
+                                        e.preventDefault();
+
+                                        const token = input.value.trim();
+                                        if (!token) {
+                                            statusDiv.innerHTML = "<span style='color: red;'>❌ Please enter a token</span>";
+                                            return;
+                                        }
+
+                                        statusDiv.innerHTML = "<span style='color: orange;'>⏳ Fetching location...</span>";
+
+                                        // Force location capture
+                                        if (navigator.geolocation) {
+                                            navigator.geolocation.getCurrentPosition(
+                                                function (position) {
+                                                    const latitude = position.coords.latitude;
+                                                    const longitude = position.coords.longitude;
+
+                                                    statusDiv.innerHTML = "<span style='color: orange;'>⏳ Validating token...</span>";
+
+                                                    fetch("{% url 'scan_qr_code' %}", {
+                                                        method: "POST",
+                                                        headers: {
+                                                            "Content-Type": "application/json",
+                                                            "X-CSRFToken": csrftoken,
+                                                        },
+                                                        body: JSON.stringify({
+                                                            token: token,
+                                                            latitude: latitude,
+                                                            longitude: longitude
+                                                        }),
+                                                    })
+                                                    .then(response => response.json())
+                                                    .then(data => {
+                                                        if (data.success) {
+                                                            statusDiv.innerHTML = "<span style='color: limegreen;'>✅ " + data.message + "</span>";
+                                                            input.value = ""; // clear input after success
+                                                        } else {
+                                                            statusDiv.innerHTML = "<span style='color: red;'>❌ " + data.message + "</span>";
+                                                        }
+                                                    })
+                                                    .catch(error => {
+                                                        console.error("Error:", error);
+                                                        statusDiv.innerHTML = "<span style='color: red;'>⚠️ Something went wrong</span>";
+                                                    });
+                                                },
+                                                function (error) {
+                                                    // If user denies location → no attendance
+                                                    statusDiv.innerHTML = "<span style='color: red;'>❌ Location permission is required to mark attendance.</span>";
+                                                }
+                                            );
+                                        } else {
+                                            statusDiv.innerHTML = "<span style='color: red;'>❌ Geolocation not supported on this browser</span>";
+                                        }
+                                    });
+                                });
+                                </script>
+
+
+
+
+                        <div class="scanner-status" id="scanner-status">
+                            <div class="status-indicator">
+                                <i class="fas fa-circle"></i>
+                                <span>Scanner ready for initialization</span>
+                            </div>
+                        </div>
+                    </div>
+
                                 
                                 <div class="scanner-right">
                                     <h4>SCANNING PROTOCOL</h4>
@@ -536,29 +644,49 @@
                                     <div class="table-col">Time</div>
                                 </div>
                                 <div class="table-body">
-                                    {% for attendance in attendances|slice:":10" %}
-                                    <div class="table-row">
-                                        <div class="table-col">{{ attendance.class_schedule.schedule_date|date:"M d, Y" }}</div>
-                                        <div class="table-col">
-                                            <strong>{{ attendance.class_schedule.semester_unit.unit.code }}</strong>
-                                        </div>
-                                        <div class="table-col">Dr. {{ attendance.class_schedule.lecturer.user.last_name }}</div>
-                                        <div class="table-col">
-                                            <span class="status-indicator {{ attendance.status|lower }}">{{ attendance.status }}</span>
-                                        </div>
-                                        <div class="table-col">
-                                            {% if attendance.scan_time %}
-                                                {{ attendance.scan_time|time:"H:i" }}
-                                            {% else %}
-                                                -
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    {% empty %}
-                                    <div class="table-row empty">
-                                        <div class="table-col" colspan="5">No attendance records found</div>
-                                    </div>
-                                    {% endfor %}
+                                   {% for attendance in attendances|slice:":10" %}
+    <div class="table-row">
+        <!-- Date (from scan_time) -->
+        <div class="table-col">
+            {% if attendance.scan_time %}
+                {{ attendance.scan_time|date:"M d, Y" }}
+            {% else %}
+                -
+            {% endif %}
+        </div>
+
+        <!-- Unit Code -->
+        <div class="table-col">
+            <strong>{{ attendance.class_schedule.semester_unit.unit.code }}</strong>
+        </div>
+
+        <!-- Lecturer -->
+        <div class="table-col">
+            Dr. {{ attendance.class_schedule.lecturer.user.last_name }}
+        </div>
+
+        <!-- Status -->
+        <div class="table-col">
+            <span class="status-indicator {{ attendance.status|lower }}">
+                {{ attendance.status }}
+            </span>
+        </div>
+
+        <!-- Time (from scan_time) -->
+        <div class="table-col">
+            {% if attendance.scan_time %}
+                {{ attendance.scan_time|time:"H:i" }}
+            {% else %}
+                -
+            {% endif %}
+        </div>
+    </div>
+{% empty %}
+    <div class="table-row empty">
+        <div class="table-col" colspan="5">No attendance records found</div>
+    </div>
+{% endfor %}
+
                                 </div>
                             </div>
                         </div>

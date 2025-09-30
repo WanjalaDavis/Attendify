@@ -8,6 +8,7 @@
     
     <!-- External CSS -->
     <link rel="stylesheet" href="{% static 'css/lecturer.css' %}">
+    <link rel="icon" href="{% static 'images/attendify_logo.png' %}" type="image/x-icon">
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -42,8 +43,8 @@
             <div class="user-section">
                 <div class="user-info">
                     <div class="user-avatar">
-                        {% if user.lecturer_profile.profile_picture %}
-                            <img src="{{ user.lecturer_profile.profile_picture.url }}" alt="Profile">
+                        {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" alt="Profile">
                         {% else %}
                             <i class="fas fa-user-circle"></i>
                         {% endif %}
@@ -54,6 +55,7 @@
                         <span class="user-role">LECTURER</span>
                     </div>
                 </div>
+
                 <div class="header-actions">
                     <button class="btn-notification" id="notificationBtn">
                         <i class="fas fa-bell"></i>

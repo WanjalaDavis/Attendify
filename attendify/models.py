@@ -498,8 +498,12 @@ class QRCode(models.Model):
 
     @property
     def is_expired(self):
-        from django.utils import timezone
+     from django.utils import timezone
+     if not self.expires_at:
+        # Decide logic: if no expiry, we assume it's still valid
+        return False  
         return timezone.now() > self.expires_at
+
 
     def save(self, *args, **kwargs):
         if not self.token:
