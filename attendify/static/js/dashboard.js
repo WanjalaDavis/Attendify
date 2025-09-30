@@ -1,553 +1,773 @@
-// Enhanced Cyber Dashboard Interactions
+// dashboard.js - Professional Student Dashboard JavaScript
+
+// ===== GLOBAL VARIABLES =====
+let activityFeedInterval = null;
+let systemStatusCheckInterval = null;
+
+// ===== DOCUMENT READY =====
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize all enhanced effects
-    initMatrixBackground();
-    initTypewriterEffect();
-    initHologramCards();
-    initDataFeed();
-    initInteractiveElements();
-    initScrollAnimations();
-    initParticleEffects();
+    initializeDashboard();
+    setupEventListeners();
+    startRealTimeUpdates();
 });
 
-// Enhanced Matrix Background with Interactive Particles
-function initMatrixBackground() {
-    const matrixBg = document.querySelector('.matrix-bg');
+// ===== DASHBOARD INITIALIZATION =====
+function initializeDashboard() {
+    console.log('🚀 Initializing Attendify Dashboard...');
     
-    // Create interactive particles
-    for (let i = 0; i < 50; i++) {
-        createFloatingParticle(matrixBg);
-    }
+    // Update welcome message based on time of day
+    updateWelcomeMessage();
     
-    // Create matrix code rain effect
-    createMatrixRain(matrixBg);
+    // Initialize module animations
+    initializeModuleAnimations();
+    
+    // Load initial data
+    loadDashboardData();
+    
+    // Check system status
+    checkSystemStatus();
+    
+    // Initialize any charts or visualizations
+    initializeDataVisualizations();
+    
+    console.log('✅ Dashboard initialized successfully');
 }
 
-function createFloatingParticle(container) {
-    const particle = document.createElement('div');
-    particle.className = 'floating-particle';
+// ===== EVENT LISTENERS SETUP =====
+function setupEventListeners() {
+    // Profile modal functionality
+    setupProfileModal();
     
-    // Random properties
-    const size = Math.random() * 4 + 1;
-    const posX = Math.random() * 100;
-    const posY = Math.random() * 100;
-    const duration = Math.random() * 20 + 10;
-    const delay = Math.random() * 5;
-    const color = getRandomNeonColor();
+    // Module card interactions
+    setupModuleInteractions();
     
-    particle.style.cssText = `
-        position: absolute;
-        width: ${size}px;
-        height: ${size}px;
-        background: ${color};
-        border-radius: 50%;
-        left: ${posX}%;
-        top: ${posY}%;
-        box-shadow: 0 0 ${size * 2}px ${color};
-        animation: floatParticle ${duration}s ease-in-out ${delay}s infinite;
-        opacity: ${Math.random() * 0.5 + 0.2};
-    `;
+    // Quick action cards
+    setupQuickActions();
     
-    container.appendChild(particle);
+    // System status updates
+    setupSystemMonitoring();
+    
+    // Window events
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('beforeunload', cleanupDashboard);
 }
 
-function createMatrixRain(container) {
-    const columns = Math.floor(window.innerWidth / 20);
+// ===== PROFILE MODAL FUNCTIONS =====
+function setupProfileModal() {
+    const profileModal = document.getElementById('profileModal');
+    const openProfileModal = document.getElementById('openProfileModal');
+    const profileModuleLink = document.getElementById('profileModuleLink');
+    const profileActionButton = document.getElementById('profileActionButton');
+    const footerProfileLink = document.getElementById('footerProfileLink');
+    const closeProfileModal = document.getElementById('closeProfileModal');
+    const cancelProfile = document.getElementById('cancelProfile');
     
-    for (let i = 0; i < columns; i++) {
-        const column = document.createElement('div');
-        column.className = 'matrix-column';
-        column.style.left = `${(i / columns) * 100}%`;
-        
-        // Create falling characters
-        createFallingChar(column, i * 100);
-        
-        container.appendChild(column);
-    }
-}
-
-function createFallingChar(column, delay) {
-    const char = document.createElement('span');
-    char.textContent = getRandomMatrixChar();
-    char.style.cssText = `
-        position: absolute;
-        color: rgba(0, 255, 136, 0.3);
-        font-family: 'Courier New', monospace;
-        font-size: 14px;
-        animation: fallDown 3s linear ${delay}ms infinite;
-        opacity: 0;
-    `;
-    
-    column.appendChild(char);
-    
-    // Recursively create more characters
-    setTimeout(() => {
-        if (column.children.length < 20) {
-            createFallingChar(column, delay);
+    // Open modal from various elements
+    [openProfileModal, profileModuleLink, profileActionButton, footerProfileLink].forEach(element => {
+        if (element) {
+            element.addEventListener('click', function(e) {
+                e.preventDefault();
+                openModal(profileModal);
+            });
         }
-    }, 100);
-}
-
-function getRandomMatrixChar() {
-    const chars = '01アイウエオカキクケコサシスセソ';
-    return chars[Math.floor(Math.random() * chars.length)];
-}
-
-function getRandomNeonColor() {
-    const colors = [
-        'rgba(0, 255, 136, 0.8)',
-        'rgba(0, 162, 255, 0.8)',
-        'rgba(179, 0, 255, 0.8)',
-        'rgba(255, 0, 200, 0.8)'
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-}
-
-// Enhanced Typewriter Effect
-function initTypewriterEffect() {
-    const typewriter = document.querySelector('.typewriter');
-    const username = typewriter.querySelector('.username');
-    const cursor = typewriter.querySelector('.cursor');
+    });
     
-    const text = username.textContent;
-    username.textContent = '';
-    
-    let i = 0;
-    const typeSpeed = 100;
-    const pauseTime = 2000;
-    
-    function type() {
-        if (i < text.length) {
-            username.textContent += text.charAt(i);
-            i++;
-            setTimeout(type, typeSpeed);
-        } else {
-            // Start blinking cursor after typing is complete
-            cursor.style.animation = 'blink 1s infinite';
+    // Close modal
+    [closeProfileModal, cancelProfile].forEach(element => {
+        if (element) {
+            element.addEventListener('click', function() {
+                closeModal(profileModal);
+            });
         }
+    });
+    
+    // Close modal when clicking outside content
+    profileModal.addEventListener('click', function(e) {
+        if (e.target === profileModal) {
+            closeModal(profileModal);
+        }
+    });
+    
+    // Profile picture preview
+    const profilePictureInput = document.getElementById('id_profile_picture');
+    const profilePreview = document.getElementById('profilePreview');
+    
+    if (profilePictureInput && profilePreview) {
+        profilePictureInput.addEventListener('change', function() {
+            handleProfilePictureUpload(this, profilePreview);
+        });
     }
     
-    // Start typing after a brief delay
-    setTimeout(type, 500);
+    // Password strength indicator
+    const passwordInput1 = document.getElementById('id_new_password1');
+    const passwordStrength = document.getElementById('passwordStrength');
+    const passwordText = document.getElementById('passwordText');
+    
+    if (passwordInput1 && passwordStrength && passwordText) {
+        passwordInput1.addEventListener('input', function() {
+            updatePasswordStrength(this.value, passwordStrength, passwordText);
+        });
+    }
+    
+    // Form submission
+    const profileForm = document.getElementById('profileForm');
+    if (profileForm) {
+        profileForm.addEventListener('submit', handleProfileFormSubmit);
+    }
 }
 
-// Enhanced Hologram Card Interactions
-function initHologramCards() {
-    const cards = document.querySelectorAll('.cyber-card');
+function openModal(modal) {
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleEscapeKey);
+}
+
+function closeModal(modal) {
+    modal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+    document.removeEventListener('keydown', handleEscapeKey);
+}
+
+function handleEscapeKey(e) {
+    if (e.key === 'Escape') {
+        const activeModal = document.querySelector('.modal-overlay.active');
+        if (activeModal) {
+            closeModal(activeModal);
+        }
+    }
+}
+
+function handleProfilePictureUpload(input, preview) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!validTypes.includes(file.type)) {
+            showNotification('Please select a valid image file (JPEG, PNG, GIF)', 'error');
+            input.value = '';
+            return;
+        }
+        
+        // Validate file size (5MB)
+        const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        if (file.size > maxSize) {
+            showNotification('File size must be less than 5MB', 'error');
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            showNotification('Profile picture updated successfully', 'success');
+        };
+        
+        reader.onerror = function() {
+            showNotification('Error reading file', 'error');
+        };
+        
+        reader.readAsDataURL(file);
+    }
+}
+
+function updatePasswordStrength(password, strengthBar, strengthText) {
+    let strength = 0;
+    let text = 'Weak';
+    let color = '#ef4444';
     
-    cards.forEach(card => {
-        // Add tilt effect on mouse move
-        card.addEventListener('mousemove', (e) => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+    // Length check
+    if (password.length >= 8) strength += 25;
+    
+    // Uppercase check
+    if (/[A-Z]/.test(password)) strength += 25;
+    
+    // Number check
+    if (/[0-9]/.test(password)) strength += 25;
+    
+    // Special character check
+    if (/[^A-Za-z0-9]/.test(password)) strength += 25;
+    
+    // Determine strength level
+    if (strength >= 75) {
+        text = 'Strong';
+        color = '#10b981';
+    } else if (strength >= 50) {
+        text = 'Medium';
+        color = '#f59e0b';
+    }
+    
+    // Update UI
+    strengthBar.style.width = strength + '%';
+    strengthBar.style.backgroundColor = color;
+    strengthText.textContent = text;
+    strengthText.style.color = color;
+}
+
+function handleProfileFormSubmit(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    
+    // Basic validation
+    const newPassword1 = document.getElementById('id_new_password1').value;
+    const newPassword2 = document.getElementById('id_new_password2').value;
+    
+    if (newPassword1 && newPassword1 !== newPassword2) {
+        showNotification('New passwords do not match', 'error');
+        return;
+    }
+    
+    // Show loading state
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    submitButton.disabled = true;
+    
+    // Simulate API call (replace with actual API call)
+    simulateProfileUpdate(formData)
+        .then(response => {
+            showNotification('Profile updated successfully', 'success');
+            closeModal(document.getElementById('profileModal'));
             
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            
-            const angleY = (x - centerX) / 25;
-            const angleX = (centerY - y) / 25;
-            
-            card.style.transform = `perspective(1000px) rotateX(${angleX}deg) rotateY(${angleY}deg) translateZ(10px)`;
+            // Update user info in header if needed
+            updateUserInfo(response.data);
+        })
+        .catch(error => {
+            console.error('Profile update error:', error);
+            showNotification('Failed to update profile: ' + error.message, 'error');
+        })
+        .finally(() => {
+            // Restore button state
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+        });
+}
+
+function simulateProfileUpdate(formData) {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            // Simulate successful update
+            const response = {
+                success: true,
+                message: 'Profile updated successfully',
+                data: {
+                    first_name: formData.get('first_name') || 'User',
+                    last_name: formData.get('last_name') || '',
+                    // Add other updated fields as needed
+                }
+            };
+            resolve(response);
+        }, 2000);
+    });
+}
+
+function updateUserInfo(userData) {
+    // Update user name in header if first name changed
+    const userNameElement = document.querySelector('.user-name');
+    if (userNameElement && userData.first_name) {
+        const currentName = userNameElement.textContent.split(' ')[0];
+        if (currentName !== userData.first_name) {
+            userNameElement.textContent = `${userData.first_name} ${userData.last_name || ''}`.trim();
+        }
+    }
+}
+
+// ===== MODULE INTERACTIONS =====
+function setupModuleInteractions() {
+    const moduleCards = document.querySelectorAll('.module-card');
+    
+    moduleCards.forEach(card => {
+        // Add hover effects
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-4px)';
         });
         
-        card.addEventListener('mouseleave', () => {
-            card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0)';
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
         });
         
-        // Add click effect
-        card.addEventListener('click', () => {
-            card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0) scale(0.95)';
+        // Add click analytics
+        card.addEventListener('click', function() {
+            const moduleName = this.querySelector('h4').textContent;
+            logModuleInteraction(moduleName);
+        });
+    });
+}
+
+function initializeModuleAnimations() {
+    // Animate module cards on load
+    const moduleCards = document.querySelectorAll('.module-card');
+    
+    moduleCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+}
+
+// ===== QUICK ACTIONS =====
+function setupQuickActions() {
+    const actionCards = document.querySelectorAll('.action-card');
+    
+    actionCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+            const actionName = this.querySelector('h5').textContent;
+            logQuickAction(actionName);
+            
+            // Add visual feedback
+            this.style.transform = 'scale(0.95)';
             setTimeout(() => {
-                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) translateZ(0) scale(1)';
+                this.style.transform = '';
             }, 150);
         });
     });
 }
 
-// Enhanced Live Data Feed
-function initDataFeed() {
-    const dataFeed = document.querySelector('.data-feed');
+// ===== REAL-TIME UPDATES =====
+function startRealTimeUpdates() {
+    // Update activity feed every 30 seconds
+    activityFeedInterval = setInterval(updateActivityFeed, 30000);
     
-    // Initial messages
-    const initialMessages = [
-        "System: User authentication verified - security protocols active",
-        "Network: Connection established with main database server",
-        "Scanner: QR recognition system calibrated and ready",
-        "Analytics: Real-time data processing initialized",
-        "Security: Encryption algorithms active - AES-256 enabled",
-        "Backup: Cloud synchronization in progress...",
-        "Update: System performance optimized for peak efficiency"
+    // Check system status every minute
+    systemStatusCheckInterval = setInterval(checkSystemStatus, 60000);
+    
+    // Update time-based elements every minute
+    setInterval(updateTimeBasedElements, 60000);
+}
+
+function updateActivityFeed() {
+    const activityFeed = document.querySelector('.activity-feed');
+    if (!activityFeed) return;
+    
+    // Simulate new activity (replace with actual data fetch)
+    const newActivity = generateRandomActivity();
+    const activityItem = createActivityItem(newActivity);
+    
+    // Add new activity to top
+    activityFeed.insertBefore(activityItem, activityFeed.firstChild);
+    
+    // Limit to 10 items
+    const items = activityFeed.querySelectorAll('.activity-item');
+    if (items.length > 10) {
+        activityFeed.removeChild(items[items.length - 1]);
+    }
+    
+    // Add animation
+    activityItem.style.opacity = '0';
+    activityItem.style.transform = 'translateY(-10px)';
+    
+    setTimeout(() => {
+        activityItem.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        activityItem.style.opacity = '1';
+        activityItem.style.transform = 'translateY(0)';
+    }, 10);
+}
+
+function generateRandomActivity() {
+    const activities = [
+        { icon: 'fas fa-sync', message: 'System sync completed successfully' },
+        { icon: 'fas fa-database', message: 'Database backup initiated' },
+        { icon: 'fas fa-shield-alt', message: 'Security scan completed - No threats found' },
+        { icon: 'fas fa-chart-line', message: 'Performance metrics updated' },
+        { icon: 'fas fa-network-wired', message: 'Network connectivity optimized' }
     ];
     
-    // Add initial messages
-    initialMessages.forEach((message, index) => {
-        setTimeout(() => {
-            addDataFeedMessage(message);
-        }, index * 1000);
-    });
-    
-    // Continue adding random messages
-    setInterval(() => {
-        const randomMessages = [
-            "System: All modules operating within normal parameters",
-            "Network: Data transfer rate stable at 1.2 Gb/s",
-            "Security: No threats detected - firewall active",
-            "Analytics: Processing attendance patterns...",
-            "Database: Backup completed successfully",
-            "Performance: System resources at 45% capacity"
-        ];
-        
-        const randomMessage = randomMessages[Math.floor(Math.random() * randomMessages.length)];
-        addDataFeedMessage(randomMessage);
-    }, 8000);
+    const randomActivity = activities[Math.floor(Math.random() * activities.length)];
+    return {
+        ...randomActivity,
+        timestamp: new Date().toLocaleTimeString('en-US', { hour12: false })
+    };
 }
 
-function addDataFeedMessage(message) {
-    const dataFeed = document.querySelector('.data-feed');
-    const timestamp = new Date().toLocaleTimeString();
+function createActivityItem(activity) {
+    const activityItem = document.createElement('div');
+    activityItem.className = 'activity-item';
     
-    const feedItem = document.createElement('div');
-    feedItem.className = 'feed-item';
-    feedItem.innerHTML = `
-        <span class="timestamp">[${timestamp}]</span>
-        <span class="message">${message}</span>
+    activityItem.innerHTML = `
+        <div class="activity-icon">
+            <i class="${activity.icon}"></i>
+        </div>
+        <div class="activity-content">
+            <p>${activity.message}</p>
+            <span class="activity-time">${activity.timestamp}</span>
+        </div>
     `;
     
-    dataFeed.appendChild(feedItem);
+    return activityItem;
+}
+
+function checkSystemStatus() {
+    // Simulate system status check (replace with actual API call)
+    const status = Math.random() > 0.1 ? 'operational' : 'degraded'; // 90% chance of operational
     
-    // Scroll to bottom
-    dataFeed.scrollTop = dataFeed.scrollHeight;
+    updateSystemStatusIndicator(status);
+}
+
+function updateSystemStatusIndicator(status) {
+    const statusIndicator = document.querySelector('.status-indicator');
+    const onlineIndicator = document.querySelector('.online-indicator');
     
-    // Remove old messages if too many
-    if (dataFeed.children.length > 10) {
-        dataFeed.removeChild(dataFeed.firstChild);
+    if (status === 'operational') {
+        if (statusIndicator) {
+            statusIndicator.innerHTML = '<i class="fas fa-server"></i><span>All Systems Operational</span>';
+            statusIndicator.style.color = 'var(--success)';
+        }
+        if (onlineIndicator) {
+            onlineIndicator.innerHTML = '<i class="fas fa-circle"></i> LIVE';
+            onlineIndicator.style.color = 'var(--success)';
+        }
+    } else {
+        if (statusIndicator) {
+            statusIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>System Degraded</span>';
+            statusIndicator.style.color = 'var(--warning)';
+        }
+        if (onlineIndicator) {
+            onlineIndicator.innerHTML = '<i class="fas fa-circle"></i> DEGRADED';
+            onlineIndicator.style.color = 'var(--warning)';
+        }
+        
+        showNotification('System performance may be affected', 'warning', 5000);
     }
 }
 
-// Enhanced Interactive Elements
-function initInteractiveElements() {
-    // Cyber button effects
-    const cyberButtons = document.querySelectorAll('.cyber-button');
+function updateTimeBasedElements() {
+    updateWelcomeMessage();
+    updateLastLoginTime();
+}
+
+function updateWelcomeMessage() {
+    const welcomeHeading = document.querySelector('.welcome-content h2');
+    if (!welcomeHeading) return;
     
-    cyberButtons.forEach(button => {
-        button.addEventListener('mouseenter', () => {
-            const glitch = button.querySelector('.cyber-glitch');
-            glitch.style.left = '100%';
-            
-            // Add sound effect (commented out as we can't play audio without user interaction)
-            // playGlitchSound();
-        });
-        
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            
-            // Create ripple effect
-            const ripple = document.createElement('div');
-            ripple.className = 'button-ripple';
-            ripple.style.cssText = `
-                position: absolute;
-                width: 100px;
-                height: 100px;
-                background: rgba(0, 255, 136, 0.3);
-                border-radius: 50%;
-                transform: translate(-50%, -50%) scale(0);
-                animation: ripple 0.6s ease-out;
-            `;
-            
-            const rect = button.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            
-            ripple.style.left = `${x}px`;
-            ripple.style.top = `${y}px`;
-            
-            button.style.position = 'relative';
-            button.appendChild(ripple);
-            
-            setTimeout(() => {
-                ripple.remove();
-            }, 600);
-            
-            // Navigate after animation
-            setTimeout(() => {
-                window.location.href = button.href;
-            }, 300);
-        });
-    });
+    const hour = new Date().getHours();
+    let greeting = 'Welcome back';
     
-    // Action button effects
-    const actionButtons = document.querySelectorAll('.action-button');
+    if (hour < 12) greeting = 'Good morning';
+    else if (hour < 18) greeting = 'Good afternoon';
+    else greeting = 'Good evening';
     
-    actionButtons.forEach(button => {
-        button.addEventListener('mouseenter', () => {
-            const icon = button.querySelector('.button-icon');
-            icon.style.transform = 'scale(1.2) rotate(10deg)';
-        });
-        
-        button.addEventListener('mouseleave', () => {
-            const icon = button.querySelector('.button-icon');
-            icon.style.transform = 'scale(1) rotate(0deg)';
-        });
-        
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            
-            // Create burst effect
-            createButtonBurst(button);
-            
-            // Navigate after animation
-            setTimeout(() => {
-                window.location.href = button.href;
-            }, 500);
-        });
+    const userName = welcomeHeading.textContent.split(', ')[1] || '';
+    welcomeHeading.textContent = `${greeting}, ${userName}`;
+}
+
+function updateLastLoginTime() {
+    const lastLoginElement = document.querySelector('.welcome-meta .meta-item:first-child');
+    if (lastLoginElement) {
+        lastLoginElement.innerHTML = `<i class="fas fa-clock"></i>Last login: ${new Date().toLocaleString()}`;
+    }
+}
+
+// ===== DATA LOADING =====
+function loadDashboardData() {
+    // Simulate loading dashboard data
+    showLoadingState();
+    
+    Promise.all([
+        simulateUserDataLoad(),
+        simulateCourseDataLoad(),
+        simulateAttendanceDataLoad()
+    ])
+    .then(([userData, courseData, attendanceData]) => {
+        updateDashboardWithData(userData, courseData, attendanceData);
+        hideLoadingState();
+    })
+    .catch(error => {
+        console.error('Error loading dashboard data:', error);
+        showNotification('Failed to load some dashboard data', 'error');
+        hideLoadingState();
     });
 }
 
-function createButtonBurst(button) {
-    const rect = button.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    for (let i = 0; i < 12; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'burst-particle';
-        
-        const angle = (i / 12) * Math.PI * 2;
-        const distance = 50;
-        const size = Math.random() * 4 + 2;
-        const color = getRandomNeonColor();
-        
-        particle.style.cssText = `
-            position: fixed;
-            width: ${size}px;
-            height: ${size}px;
-            background: ${color};
-            border-radius: 50%;
-            left: ${centerX}px;
-            top: ${centerY}px;
-            box-shadow: 0 0 ${size * 2}px ${color};
-            animation: burst 0.8s ease-out forwards;
-            z-index: 1000;
-        `;
-        
-        // Set animation
-        particle.style.setProperty('--endX', `${Math.cos(angle) * distance}px`);
-        particle.style.setProperty('--endY', `${Math.sin(angle) * distance}px`);
-        
-        document.body.appendChild(particle);
-        
-        // Remove particle after animation
+function simulateUserDataLoad() {
+    return new Promise((resolve) => {
         setTimeout(() => {
-            particle.remove();
-        }, 800);
-    }
-}
-
-// Enhanced Scroll Animations
-function initScrollAnimations() {
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('animate-in');
-            }
-        });
-    }, observerOptions);
-    
-    // Observe elements to animate
-    const elementsToAnimate = document.querySelectorAll('.cyber-card, .terminal-container, .feed-container, .panel-container');
-    elementsToAnimate.forEach(el => {
-        observer.observe(el);
-    });
-}
-
-// Enhanced Particle Effects for Special Interactions
-function initParticleEffects() {
-    // Add particle effect to logo
-    const logo = document.querySelector('.hologram-logo');
-    
-    logo.addEventListener('mouseenter', () => {
-        createLogoParticles(logo);
-    });
-    
-    // Add particle effect to user orb
-    const userOrb = document.querySelector('.user-orb');
-    
-    userOrb.addEventListener('mouseenter', () => {
-        createOrbParticles(userOrb);
-    });
-}
-
-function createLogoParticles(logo) {
-    const rect = logo.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    for (let i = 0; i < 8; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'logo-particle';
-        
-        const angle = (i / 8) * Math.PI * 2;
-        const distance = 30;
-        const size = Math.random() * 3 + 1;
-        const color = getRandomNeonColor();
-        
-        particle.style.cssText = `
-            position: fixed;
-            width: ${size}px;
-            height: ${size}px;
-            background: ${color};
-            border-radius: 50%;
-            left: ${centerX}px;
-            top: ${centerY}px;
-            box-shadow: 0 0 ${size * 2}px ${color};
-            animation: logoPulse 1.5s ease-out forwards;
-            z-index: 1000;
-        `;
-        
-        // Set animation
-        particle.style.setProperty('--endX', `${Math.cos(angle) * distance}px`);
-        particle.style.setProperty('--endY', `${Math.sin(angle) * distance}px`);
-        
-        document.body.appendChild(particle);
-        
-        // Remove particle after animation
-        setTimeout(() => {
-            particle.remove();
-        }, 1500);
-    }
-}
-
-function createOrbParticles(orb) {
-    const rect = orb.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    for (let i = 0; i < 15; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'orb-particle';
-        
-        const angle = Math.random() * Math.PI * 2;
-        const distance = Math.random() * 40 + 10;
-        const size = Math.random() * 2 + 1;
-        const color = getRandomNeonColor();
-        const delay = Math.random() * 0.5;
-        
-        particle.style.cssText = `
-            position: fixed;
-            width: ${size}px;
-            height: ${size}px;
-            background: ${color};
-            border-radius: 50%;
-            left: ${centerX}px;
-            top: ${centerY}px;
-            box-shadow: 0 0 ${size * 2}px ${color};
-            animation: orbFloat 2s ease-out ${delay}s forwards;
-            z-index: 1000;
-        `;
-        
-        // Set animation
-        particle.style.setProperty('--endX', `${Math.cos(angle) * distance}px`);
-        particle.style.setProperty('--endY', `${Math.sin(angle) * distance}px`);
-        
-        document.body.appendChild(particle);
-        
-        // Remove particle after animation
-        setTimeout(() => {
-            particle.remove();
-        }, 2000 + delay * 1000);
-    }
-}
-
-// Add CSS animations for new effects
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes floatParticle {
-        0%, 100% { transform: translate(0, 0) rotate(0deg); }
-        25% { transform: translate(10px, -10px) rotate(90deg); }
-        50% { transform: translate(0, -20px) rotate(180deg); }
-        75% { transform: translate(-10px, -10px) rotate(270deg); }
-    }
-    
-    @keyframes fallDown {
-        0% { transform: translateY(-20px); opacity: 0; }
-        10% { opacity: 1; }
-        90% { opacity: 1; }
-        100% { transform: translateY(100vh); opacity: 0; }
-    }
-    
-    @keyframes ripple {
-        to { transform: translate(-50%, -50%) scale(4); opacity: 0; }
-    }
-    
-    @keyframes burst {
-        to { 
-            transform: translate(var(--endX), var(--endY)) scale(0); 
-            opacity: 0;
-        }
-    }
-    
-    @keyframes logoPulse {
-        0% { transform: translate(0, 0) scale(1); opacity: 1; }
-        100% { 
-            transform: translate(var(--endX), var(--endY)) scale(0); 
-            opacity: 0;
-        }
-    }
-    
-    @keyframes orbFloat {
-        0% { transform: translate(0, 0) scale(1); opacity: 1; }
-        100% { 
-            transform: translate(var(--endX), var(--endY)) scale(0); 
-            opacity: 0;
-        }
-    }
-    
-    .animate-in {
-        animation: slideUp 0.8s ease-out forwards;
-    }
-    
-    @keyframes slideUp {
-        from { 
-            opacity: 0; 
-            transform: translateY(30px); 
-        }
-        to { 
-            opacity: 1; 
-            transform: translateY(0); 
-        }
-    }
-    
-    .matrix-column {
-        position: absolute;
-        top: 0;
-        height: 100%;
-        width: 1px;
-    }
-    
-    .floating-particle, .burst-particle, .logo-particle, .orb-particle {
-        pointer-events: none;
-    }
-`;
-
-document.head.appendChild(style);
-
-// System performance monitoring (optional)
-function monitorPerformance() {
-    // Log performance metrics (could be sent to analytics)
-    if ('performance' in window) {
-        setTimeout(() => {
-            const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
-            console.log(`Page load time: ${loadTime}ms`);
+            resolve({
+                streak: 15,
+                attendanceRate: 92
+            });
         }, 1000);
+    });
+}
+
+function simulateCourseDataLoad() {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve({
+                enrolledUnits: 6,
+                activeCourses: 1
+            });
+        }, 800);
+    });
+}
+
+function simulateAttendanceDataLoad() {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve({
+                presentClasses: 45,
+                totalClasses: 52
+            });
+        }, 1200);
+    });
+}
+
+function updateDashboardWithData(userData, courseData, attendanceData) {
+    // Update stats in header
+    updateHeaderStats(userData, courseData);
+    
+    // Update module content with real data
+    updateModuleContent(attendanceData);
+}
+
+function updateHeaderStats(userData, courseData) {
+    // Update streak count
+    const streakElement = document.querySelector('.header-stats .stat-item:nth-child(3) .stat-value');
+    if (streakElement && userData.streak) {
+        streakElement.textContent = userData.streak;
+    }
+    
+    // Update course count
+    const courseElement = document.querySelector('.header-stats .stat-item:nth-child(2) .stat-value');
+    if (courseElement && courseData.activeCourses) {
+        courseElement.textContent = courseData.activeCourses;
     }
 }
 
+function updateModuleContent(attendanceData) {
+    // Update any module content that depends on loaded data
+    // This would be expanded based on specific data needs
+}
 
-// Initialize performance monitoring
-monitorPerformance();
+// ===== SYSTEM MONITORING =====
+function setupSystemMonitoring() {
+    // Monitor network status
+    window.addEventListener('online', () => {
+        showNotification('Connection restored', 'success');
+        updateSystemStatusIndicator('operational');
+    });
+    
+    window.addEventListener('offline', () => {
+        showNotification('Connection lost - some features may not work', 'error');
+        updateSystemStatusIndicator('degraded');
+    });
+    
+    // Monitor page visibility
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            // Page became visible, refresh data
+            loadDashboardData();
+        }
+    });
+}
+
+// ===== NOTIFICATION SYSTEM =====
+function showNotification(message, type = 'info', duration = 5000) {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.dashboard-notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `dashboard-notification ${type}`;
+    
+    let icon = 'fas fa-info-circle';
+    switch(type) {
+        case 'success':
+            icon = 'fas fa-check-circle';
+            break;
+        case 'error':
+            icon = 'fas fa-exclamation-circle';
+            break;
+        case 'warning':
+            icon = 'fas fa-exclamation-triangle';
+            break;
+    }
+    
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="${icon}"></i>
+            <span>${message}</span>
+        </div>
+        <button class="notification-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    // Add styles if not already added
+    if (!document.querySelector('#notification-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'notification-styles';
+        styles.textContent = `
+            .dashboard-notification {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-left: 4px solid var(--primary);
+                border-radius: var(--radius-md);
+                padding: var(--space-md);
+                box-shadow: var(--shadow-lg);
+                z-index: 1000;
+                max-width: 400px;
+                animation: slideInRight 0.3s ease-out;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: var(--space-sm);
+            }
+            
+            .dashboard-notification.success {
+                border-left-color: var(--success);
+            }
+            
+            .dashboard-notification.error {
+                border-left-color: var(--error);
+            }
+            
+            .dashboard-notification.warning {
+                border-left-color: var(--warning);
+            }
+            
+            .notification-content {
+                display: flex;
+                align-items: center;
+                gap: var(--space-sm);
+                flex: 1;
+            }
+            
+            .notification-close {
+                background: none;
+                border: none;
+                color: var(--text-muted);
+                cursor: pointer;
+                padding: 4px;
+                border-radius: var(--radius-sm);
+                transition: var(--transition);
+            }
+            
+            .notification-close:hover {
+                background: var(--background);
+                color: var(--text-primary);
+            }
+            
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, duration);
+    }
+    
+    return notification;
+}
+
+// ===== LOADING STATES =====
+function showLoadingState() {
+    const mainContent = document.querySelector('.dashboard-main');
+    if (mainContent) {
+        mainContent.style.opacity = '0.7';
+        mainContent.style.pointerEvents = 'none';
+    }
+}
+
+function hideLoadingState() {
+    const mainContent = document.querySelector('.dashboard-main');
+    if (mainContent) {
+        mainContent.style.opacity = '1';
+        mainContent.style.pointerEvents = 'auto';
+    }
+}
+
+// ===== DATA VISUALIZATIONS =====
+function initializeDataVisualizations() {
+    // Initialize any charts or data visualizations
+    // This would be expanded based on specific visualization needs
+    
+    // Example: Animate progress bars
+    animateProgressBars();
+}
+
+function animateProgressBars() {
+    const progressBars = document.querySelectorAll('.progress-fill');
+    
+    progressBars.forEach(bar => {
+        const originalWidth = bar.style.width;
+        bar.style.width = '0%';
+        
+        setTimeout(() => {
+            bar.style.transition = 'width 1s ease-in-out';
+            bar.style.width = originalWidth;
+        }, 500);
+    });
+}
+
+// ===== ANALYTICS & LOGGING =====
+function logModuleInteraction(moduleName) {
+    console.log(`Module accessed: ${moduleName}`);
+    // Send to analytics service
+    // analytics.track('module_access', { module: moduleName });
+}
+
+function logQuickAction(actionName) {
+    console.log(`Quick action: ${actionName}`);
+    // Send to analytics service
+    // analytics.track('quick_action', { action: actionName });
+}
+
+// ===== WINDOW EVENT HANDLERS =====
+function handleResize() {
+    // Handle any responsive behavior
+    const headerStats = document.querySelector('.header-stats');
+    if (headerStats && window.innerWidth < 768) {
+        // Adjust stats layout for mobile
+        headerStats.style.flexDirection = 'row';
+        headerStats.style.justifyContent = 'space-around';
+    }
+}
+
+function cleanupDashboard() {
+    // Clear intervals
+    if (activityFeedInterval) clearInterval(activityFeedInterval);
+    if (systemStatusCheckInterval) clearInterval(systemStatusCheckInterval);
+    
+    // Remove event listeners
+    window.removeEventListener('resize', handleResize);
+    window.removeEventListener('beforeunload', cleanupDashboard);
+}
+
+// ===== ERROR HANDLING =====
+window.addEventListener('error', function(e) {
+    console.error('Global error:', e.error);
+    showNotification('An unexpected error occurred', 'error');
+});
+
+// Make functions globally available
+window.showNotification = showNotification;
+
+console.log('✅ Dashboard JavaScript loaded successfully');

@@ -1,4 +1,3 @@
-// Base JavaScript for Cyber Theme
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize theme
     initTheme();

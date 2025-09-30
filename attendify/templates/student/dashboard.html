@@ -9,75 +9,66 @@
     <link rel="icon" href="{% static 'images/attendify_logo.png' %}" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
 </head>
 <body>
-    <!-- Animated Background -->
-    <div class="matrix-bg"></div>
-    
     <!-- Profile Modal -->
-    <div id="profileModal" class="cyber-modal">
-        <div class="modal-content">
+    <div id="profileModal" class="modal-overlay">
+        <div class="modal-container">
             <div class="modal-header">
                 <div class="modal-title">
-                    <i class="fas fa-user-astronaut"></i>
-                    <span>PROFILE CONFIGURATION</span>
+                    <i class="fas fa-user-cog"></i>
+                    <h3>Profile Settings</h3>
                 </div>
-                <div class="modal-controls">
-                    <button class="modal-close" id="closeProfileModal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+                <button class="modal-close" id="closeProfileModal">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             
             <div class="modal-body">
                 <form id="profileForm" method="POST" enctype="multipart/form-data" action="{% url 'profile_edit' %}">
                     {% csrf_token %}
-                    <div class="form-grid">
+                    <div class="form-sections">
                         <!-- Personal Information Section -->
                         <div class="form-section">
                             <div class="section-header">
-                                <i class="fas fa-id-card"></i>
-                                <h4>PERSONAL INFORMATION</h4>
+                                <i class="fas fa-user"></i>
+                                <h4>Personal Information</h4>
                             </div>
                             
                             <div class="profile-image-section">
                                 <div class="current-avatar">
-                                    <img id="profilePreview" src="{% if user.profile_picture %}{{ user.profile_picture.url }}{% else %}https://ui-avatars.com/api/?name={{ user.first_name }}&background=00ff88&color=000&bold=true{% endif %}" alt="Profile Picture">
+                                    <img id="profilePreview" src="{% if user.profile_picture %}{{ user.profile_picture.url }}{% else %}https://ui-avatars.com/api/?name={{ user.first_name }}&background=4f46e5&color=fff&bold=true{% endif %}" alt="Profile Picture">
                                 </div>
                                 <div class="avatar-controls">
-                                    <label for="id_profile_picture" class="cyber-button small">
+                                    <label for="id_profile_picture" class="btn-secondary">
                                         <i class="fas fa-upload"></i>
-                                        <span>UPLOAD IMAGE</span>
+                                        Upload Image
                                     </label>
                                     <input type="file" id="id_profile_picture" name="profile_picture" accept="image/*" style="display: none;">
                                     <p class="file-info">PNG, JPG up to 5MB</p>
                                 </div>
                             </div>
                             
-                            <div class="input-group cyber-input">
-                                <label for="id_first_name">FIRST NAME</label>
-                                <input type="text" id="id_first_name" name="first_name" value="{{ user.first_name }}" class="cyber-field">
-                                <div class="input-glow"></div>
+                            <div class="form-group">
+                                <label for="id_first_name">First Name</label>
+                                <input type="text" id="id_first_name" name="first_name" value="{{ user.first_name }}" class="form-input">
                             </div>
                             
-                            <div class="input-group cyber-input">
-                                <label for="id_last_name">LAST NAME</label>
-                                <input type="text" id="id_last_name" name="last_name" value="{{ user.last_name }}" class="cyber-field">
-                                <div class="input-glow"></div>
+                            <div class="form-group">
+                                <label for="id_last_name">Last Name</label>
+                                <input type="text" id="id_last_name" name="last_name" value="{{ user.last_name }}" class="form-input">
                             </div>
                             
-                            <div class="input-group cyber-input">
-                                <label for="id_email">EMAIL ADDRESS</label>
-                                <input type="email" id="id_email" name="email" value="{{ user.email }}" class="cyber-field">
-                                <div class="input-glow"></div>
+                            <div class="form-group">
+                                <label for="id_email">Email Address</label>
+                                <input type="email" id="id_email" name="email" value="{{ user.email }}" class="form-input">
                             </div>
                             
-                            <div class="input-group cyber-input">
-                                <label for="id_phone_number">PHONE NUMBER</label>
-                                <input type="tel" id="id_phone_number" name="phone_number" value="{{ user.phone_number }}" class="cyber-field">
-                                <div class="input-glow"></div>
+                            <div class="form-group">
+                                <label for="id_phone_number">Phone Number</label>
+                                <input type="tel" id="id_phone_number" name="phone_number" value="{{ user.phone_number }}" class="form-input">
                             </div>
                         </div>
                         
@@ -85,39 +76,35 @@
                         <div class="form-section">
                             <div class="section-header">
                                 <i class="fas fa-shield-alt"></i>
-                                <h4>ACCOUNT SECURITY</h4>
+                                <h4>Account Security</h4>
                             </div>
                             
-                            <div class="input-group cyber-input">
-                                <label for="id_username">USERNAME</label>
-                                <input type="text" id="id_username" name="username" value="{{ user.username }}" class="cyber-field" readonly>
-                                <div class="input-glow"></div>
+                            <div class="form-group">
+                                <label for="id_username">Username</label>
+                                <input type="text" id="id_username" name="username" value="{{ user.username }}" class="form-input" readonly>
                                 <small class="field-note">Username cannot be changed</small>
                             </div>
                             
-                            <div class="input-group cyber-input">
-                                <label for="id_old_password">CURRENT PASSWORD</label>
-                                <input type="password" id="id_old_password" name="old_password" class="cyber-field">
-                                <div class="input-glow"></div>
+                            <div class="form-group">
+                                <label for="id_old_password">Current Password</label>
+                                <input type="password" id="id_old_password" name="old_password" class="form-input">
                             </div>
                             
-                            <div class="input-group cyber-input">
-                                <label for="id_new_password1">NEW PASSWORD</label>
-                                <input type="password" id="id_new_password1" name="new_password1" class="cyber-field">
-                                <div class="input-glow"></div>
+                            <div class="form-group">
+                                <label for="id_new_password1">New Password</label>
+                                <input type="password" id="id_new_password1" name="new_password1" class="form-input">
                             </div>
                             
-                            <div class="input-group cyber-input">
-                                <label for="id_new_password2">CONFIRM NEW PASSWORD</label>
-                                <input type="password" id="id_new_password2" name="new_password2" class="cyber-field">
-                                <div class="input-glow"></div>
+                            <div class="form-group">
+                                <label for="id_new_password2">Confirm New Password</label>
+                                <input type="password" id="id_new_password2" name="new_password2" class="form-input">
                             </div>
                             
                             <div class="password-strength">
                                 <div class="strength-bar">
                                     <div class="strength-fill" id="passwordStrength"></div>
                                 </div>
-                                <span class="strength-text" id="passwordText">PASSWORD STRENGTH</span>
+                                <span class="strength-text" id="passwordText">Password Strength</span>
                             </div>
                         </div>
                         
@@ -125,39 +112,39 @@
                         <div class="form-section">
                             <div class="section-header">
                                 <i class="fas fa-graduation-cap"></i>
-                                <h4>ACADEMIC INFORMATION</h4>
+                                <h4>Academic Information</h4>
                             </div>
                             
                             <div class="read-only-info">
                                 <div class="info-item">
-                                    <span class="info-label">REGISTRATION NUMBER</span>
+                                    <span class="info-label">Registration Number</span>
                                     <span class="info-value">{{ student.registration_number }}</span>
                                 </div>
                                 
                                 <div class="info-item">
-                                    <span class="info-label">YEAR OF STUDY</span>
+                                    <span class="info-label">Year of Study</span>
                                     <span class="info-value">{{ student.get_year_of_study_display }}</span>
                                 </div>
                                 
                                 {% if student.enrollments.exists %}
                                     {% with enrollment=student.enrollments.first %}
                                         <div class="info-item">
-                                            <span class="info-label">COURSE</span>
+                                            <span class="info-label">Course</span>
                                             <span class="info-value">{{ enrollment.course.name }}</span>
                                         </div>
                                         
                                         <div class="info-item">
-                                            <span class="info-label">ENROLLMENT DATE</span>
+                                            <span class="info-label">Enrollment Date</span>
                                             <span class="info-value">{{ student.enrollment_date|date:"M d, Y" }}</span>
                                         </div>
                                     {% endwith %}
                                 {% endif %}
                                 
                                 <div class="info-item">
-                                    <span class="info-label">ACCOUNT STATUS</span>
+                                    <span class="info-label">Account Status</span>
                                     <span class="info-value status-active">
                                         <i class="fas fa-check-circle"></i>
-                                        ACTIVE
+                                        Active
                                     </span>
                                 </div>
                             </div>
@@ -165,12 +152,12 @@
                     </div>
                     
                     <div class="form-actions">
-                        <button type="button" class="cyber-button secondary" id="cancelProfile">
-                            <span>CANCEL</span>
+                        <button type="button" class="btn-secondary" id="cancelProfile">
+                            Cancel
                         </button>
-                        <button type="submit" class="cyber-button primary">
-                            <span>SAVE CHANGES</span>
+                        <button type="submit" class="btn-primary">
                             <i class="fas fa-save"></i>
+                            Save Changes
                         </button>
                     </div>
                 </form>
@@ -178,146 +165,139 @@
         </div>
     </div>
     
-    <!-- Cyber Navigation -->
-    <nav class="cyber-nav">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <div class="hologram-logo">
-                    <div class="logo-core"></div>
-                    <div class="logo-ring"></div>
-                    <i class="fas fa-fingerprint"></i>
+    <!-- Professional Header -->
+    <header class="dashboard-header">
+        <div class="container-fluid">
+            <div class="header-content">
+                <div class="brand-section">
+                    <div class="logo-container">
+                        <div class="logo-icon">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <div class="brand-text">
+                            <h1 class="brand-name">Attendify</h1>
+                            <span class="brand-subtitle">Dashboard</span>
+                        </div>
+                    </div>
                 </div>
-                <span class="brand-name glitch" data-text="ATTENDIFY">ATTENDIFY</span>
-            </div>
-            
-            <div class="nav-center">
-                <div class="nav-stats">
-                    <div class="stat">
-                        <span class="stat-value">Mark</span>
-                        <span class="stat-label ms-3">Attendance</span>
+                
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">Mark</div>
+                        <div class="stat-label">Attendance</div>
                     </div>
                     <div class="stat-divider"></div>
-                    <div class="stat">
-                        <span class="stat-value">1</span>
-                        <span class="stat-label ms-3">Course</span>
+                    <div class="stat-item">
+                        <div class="stat-value">1</div>
+                        <div class="stat-label">Course</div>
                     </div>
                     <div class="stat-divider"></div>
-                    <div class="stat">
-                        <span class="stat-value">15</span>
-                        <span class="stat-label ms-3">Streak</span>
+                    <div class="stat-item">
+                        <div class="stat-value">15</div>
+                        <div class="stat-label">Streak</div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="nav-actions">
-                <div class="user-orb" id="openProfileModal">
-                    <div class="orb-glow"></div>
-                    <img src="https://ui-avatars.com/api/?name={{ user.first_name }}&background=00ff88&color=000&bold=true" alt="{{ user.last_name }}">
-                    <div class="orb-pulse"></div>
-                </div>
-                <div class="action-buttons">
-                    <a href="{% url 'student_portal' %}" class="cyber-button">
-                        <span class="cyber-text">PORTAL</span>
-                        <div class="cyber-glitch"></div>
-                    </a>
-                    <a href="{% url 'logout' %}" class="logout-hologram">
-                        <i class="fas fa-power-off"></i>
-                    </a>
+                
+                <div class="user-section">
+                    <div class="user-avatar" id="openProfileModal">
+                        <img src="https://ui-avatars.com/api/?name={{ user.first_name }}&background=4f46e5&color=fff&bold=true" alt="{{ user.last_name }}">
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">{{ user.first_name }} {{ user.last_name }}</div>
+                        <div class="user-id">{{ student.registration_number }}</div>
+                    </div>
+                    <div class="header-actions">
+                        <a href="{% url 'student_portal' %}" class="action-btn">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                        <a href="{% url 'logout' %}" class="action-btn logout">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Navigation Glow Bar -->
-        <div class="nav-glow-bar"></div>
-    </nav>
+    </header>
 
-    <!-- Main Dashboard -->
-    <main class="hackathon-dashboard">
-        <!-- Hero Terminal -->
-        <section class="terminal-hero">
-            <div class="terminal-container">
-                <div class="terminal-header">
-                    <div class="terminal-controls">
-                        <span class="control red"></span>
-                        <span class="control yellow"></span>
-                        <span class="control green"></span>
-                    </div>
-                    <div class="terminal-title">student_dashboard.exe</div>
-                </div>
-                <div class="terminal-body">
-                    <div class="typewriter">
-                        <span class="prompt">> Welcome back,</span>
-                        <span class="username">{{ user.first_name }}</span>
-                        <span class="cursor">|</span>
-                    </div>
-                    <div class="terminal-output">
-                        <p>> System: Attendify v2.0.1 - Online</p>
-                        <p>> Status: All systems operational</p>
-                        <p>> Last login: {{ request.user.last_login|date:"M d, Y H:i" }}</p>
-                        <p>> Ready to execute commands...</p>
+    <!-- Main Dashboard Content -->
+    <main class="dashboard-main">
+        <div class="container-fluid">
+            <!-- Welcome Section -->
+            <section class="welcome-section">
+                <div class="welcome-content">
+                    <h2>Welcome back, {{ user.first_name }}</h2>
+                    <p>Ready to manage your academic attendance and progress</p>
+                    <div class="welcome-meta">
+                        <span class="meta-item">
+                            <i class="fas fa-clock"></i>
+                            Last login: {{ request.user.last_login|date:"M d, Y H:i" }}
+                        </span>
+                        <span class="meta-item">
+                            <i class="fas fa-shield-alt"></i>
+                            All systems operational
+                        </span>
                     </div>
                 </div>
-            </div>
-            
-            <div class="hero-visual">
-                <div class="hologram-display">
-                    <div class="hologram-card">
-                        <div class="holo-content">
+                <div class="welcome-visual">
+                    <div class="status-card">
+                        <div class="status-icon">
                             <i class="fas fa-qrcode"></i>
-                            <h3>QR SYSTEM</h3>
-                            <p>ACTIVE</p>
                         </div>
-                        <div class="holo-grid"></div>
+                        <div class="status-text">
+                            <span>QR System</span>
+                            <small>Active & Ready</small>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Cyber Grid -->
-        <section class="cyber-grid-section">
-            <div class="grid-container">
+            <!-- Dashboard Modules -->
+            <section class="modules-section">
                 <div class="section-header">
-                    <h2 class="cyber-title">SYSTEM MODULES</h2>
-                    <p class="cyber-subtitle">Select your operation</p>
+                    <h3>Dashboard Modules</h3>
+                    <p>Access your academic tools and features</p>
                 </div>
                 
-                <div class="cyber-grid">
+                <div class="modules-grid">
                     <!-- QR Module -->
-                    <div class="cyber-card module-qr">
-                        <div class="card-hologram"></div>
-                        <div class="card-icon">
+                    <div class="module-card">
+                        <div class="module-icon qr">
                             <i class="fas fa-qrcode"></i>
                         </div>
-                        <div class="card-content">
-                            <h3>QR ATTENDANCE</h3>
-                            <p>Mark attendance using encrypted QR codes</p>
+                        <div class="module-content">
+                            <h4>QR Attendance</h4>
+                            <p>Mark attendance using encrypted QR codes with real-time validation</p>
                             <div class="module-stats">
                                 <div class="stat">
                                     <span>Speed</span>
-                                    <div class="bar"><div class="fill" style="width: 95%"></div></div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: 95%"></div>
+                                    </div>
                                 </div>
                                 <div class="stat">
                                     <span>Accuracy</span>
-                                    <div class="bar"><div class="fill" style="width: 98%"></div></div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: 98%"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="card-actions">
-                            <a href="{% url 'student_portal' %}" class="cyber-link">
-                                ACCESS <i class="fas fa-arrow-right"></i>
+                        <div class="module-actions">
+                            <a href="{% url 'student_portal' %}" class="btn-primary">
+                                Access Portal
+                                <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
                     </div>
                     
                     <!-- Analytics Module -->
-                    <div class="cyber-card module-analytics">
-                        <div class="card-hologram"></div>
-                        <div class="card-icon">
-                            <i class="fas fa-chart-network"></i>
+                    <div class="module-card">
+                        <div class="module-icon analytics">
+                            <i class="fas fa-chart-line"></i>
                         </div>
-                        <div class="card-content">
-                            <h3>ANALYTICS DASHBOARD</h3>
-                            <p>Real-time attendance analytics & insights</p>
+                        <div class="module-content">
+                            <h4>Analytics Dashboard</h4>
+                            <p>Track your attendance patterns and academic performance</p>
                             <div class="data-visual">
                                 <div class="visual-bar" style="height: 80%"></div>
                                 <div class="visual-bar" style="height: 95%"></div>
@@ -326,170 +306,212 @@
                                 <div class="visual-bar" style="height: 75%"></div>
                             </div>
                         </div>
-                        <div class="card-actions">
-                            <a href="{% url 'student_portal' %}" class="cyber-link">
-                                VIEW DATA <i class="fas fa-arrow-right"></i>
+                        <div class="module-actions">
+                            <a href="{% url 'student_portal' %}" class="btn-primary">
+                                View Analytics
+                                <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
                     </div>
                     
-<!-- Courses Module -->
-<div class="cyber-card module-courses">
-    <div class="card-hologram"></div>
-    <div class="card-icon">
-        <i class="fas fa-books"></i>
-    </div>
-    <div class="card-content">
-        <h3>COURSE MANAGEMENT</h3>
-        
-        {% if student.enrollments.exists %}
-            {% with enrollment=student.enrollments.first %}
-                <p>Your course <strong>{{ enrollment.course.name }}</strong> with {{ enrolled_units }} active units.</p>
-                <div class="course-tags">
-                    <!-- Since we don't have unit_enrollments in context, show generic info -->
-                    <span class="tag">{{ enrolled_units }} UNITS</span>
-                    <span class="tag">ACTIVE</span>
-                    <span class="tag">ENROLLED</span>
-                </div>
-            {% endwith %}
-        {% else %}
-            <p>You are not currently enrolled in any course.</p>
-            <div class="course-tags">
-                <span class="tag">No enrollment</span>
-            </div>
-        {% endif %}
-    </div>
-    <div class="card-actions">
-        <a href="{% url 'student_portal' %}" class="cyber-link">
-            BROWSE <i class="fas fa-arrow-right"></i>
-        </a>
-    </div>
-</div>
+                    <!-- Courses Module -->
+                    <div class="module-card">
+                        <div class="module-icon courses">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="module-content">
+                            <h4>Course Management</h4>
+                            {% if student.enrollments.exists %}
+                                {% with enrollment=student.enrollments.first %}
+                                    <p>Your course <strong>{{ enrollment.course.name }}</strong> with {{ enrolled_units }} active units</p>
+                                    <div class="course-tags">
+                                        <span class="tag">{{ enrolled_units }} Units</span>
+                                        <span class="tag">Active</span>
+                                        <span class="tag">Enrolled</span>
+                                    </div>
+                                {% endwith %}
+                            {% else %}
+                                <p>You are not currently enrolled in any course</p>
+                                <div class="course-tags">
+                                    <span class="tag">No enrollment</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="module-actions">
+                            <a href="{% url 'student_portal' %}" class="btn-primary">
+                                Browse Courses
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    
                     <!-- Profile Module -->
-                    <div class="cyber-card module-profile">
-                        <div class="card-hologram"></div>
-                        <div class="card-icon">
-                            <i class="fas fa-user-astronaut"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3>PROFILE SYSTEM</h3>
-                            <p>Manage your personal and academic data</p>
-                            <div class="security-status">
-                                <i class="fas fa-shield-check"></i>
-                                <span>Security Level: MAXIMUM</span>
-                            </div>
-                        </div>
-                        <div class="card-actions">
-                            <a href="#" class="cyber-link" id="profileModuleLink">
-                                CONFIGURE <i class="fas fa-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Live Data Feed -->
-        <section class="data-feed-section">
-            <div class="feed-container">
-                <div class="feed-header">
-                    <h3>LIVE DATA STREAM</h3>
-                    <div class="feed-controls">
-                        <span class="online-indicator">
-                            <i class="fas fa-circle"></i> LIVE
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="data-feed">
-                    <div class="feed-item">
-                        <span class="timestamp">[{{ now|date:"H:i:s" }}]</span>
-                        <span class="message">System: User {{ user.username }} authenticated successfully</span>
-                    </div>
-                    <div class="feed-item">
-                        <span class="timestamp">[{{ now|date:"H:i:s" }}]</span>
-                        <span class="message">Attendance: QR scanner system initialized and ready</span>
-                    </div>
-                    <div class="feed-item">
-                        <span class="timestamp">[{{ now|date:"H:i:s" }}]</span>
-                        <span class="message">Security: All encryption protocols active</span>
-                    </div>
-                    <div class="feed-item">
-                        <span class="timestamp">[{{ now|date:"H:i:s" }}]</span>
-                        <span class="message">Database: Connection established - courses loaded</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Quick Actions Panel -->
-        <section class="actions-panel">
-            <div class="panel-container">
-                <div class="panel-header">
-                    <h3>QUICK COMMANDS</h3>
-                    <div class="panel-glow"></div>
-                </div>
-                
-                <div class="action-buttons-grid">
-                    <a href="{% url 'student_portal' %}" class="action-button">
-                        <div class="button-icon">
-                            <i class="fas fa-camera"></i>
-                        </div>
-                        <span>SCAN QR</span>
-                        <div class="button-pulse"></div>
-                    </a>
-                    
-                    <a href="{% url 'student_portal' %}" class="action-button">
-                        <div class="button-icon">
-                            <i class="fas fa-calendar-alt"></i>
-                        </div>
-                        <span>SCHEDULE</span>
-                        <div class="button-pulse"></div>
-                    </a>
-                    
-                    <a href="{% url 'student_portal' %}" class="action-button">
-                        <div class="button-icon">
-                            <i class="fas fa-chart-bar"></i>
-                        </div>
-                        <span>ANALYTICS</span>
-                        <div class="button-pulse"></div>
-                    </a>
-                    
-                    <a href="#" class="action-button" id="profileActionButton">
-                        <div class="button-icon">
+                    <div class="module-card">
+                        <div class="module-icon profile">
                             <i class="fas fa-user-cog"></i>
                         </div>
-                        <span>PROFILE</span>
-                        <div class="button-pulse"></div>
+                        <div class="module-content">
+                            <h4>Profile System</h4>
+                            <p>Manage your personal information and account settings</p>
+                            <div class="security-status">
+                                <i class="fas fa-shield-check"></i>
+                                <span>Security Level: Maximum</span>
+                            </div>
+                        </div>
+                        <div class="module-actions">
+                            <a href="#" class="btn-primary" id="profileModuleLink">
+                                Configure Profile
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Activity Feed -->
+            <section class="activity-section">
+                <div class="activity-container">
+                    <div class="activity-header">
+                        <h3>Recent Activity</h3>
+                        <div class="activity-controls">
+                            <span class="online-indicator">
+                                <i class="fas fa-circle"></i> Live
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="activity-feed">
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p>User {{ user.username }} authenticated successfully</p>
+                                <span class="activity-time">{{ now|date:"H:i:s" }}</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p>QR scanner system initialized and ready</p>
+                                <span class="activity-time">{{ now|date:"H:i:s" }}</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p>All security protocols active and running</p>
+                                <span class="activity-time">{{ now|date:"H:i:s" }}</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p>Database connection established - courses loaded</p>
+                                <span class="activity-time">{{ now|date:"H:i:s" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="quick-actions-section">
+                <div class="section-header">
+                    <h3>Quick Actions</h3>
+                    <p>Frequently used features and tools</p>
+                </div>
+                
+                <div class="actions-grid">
+                    <a href="{% url 'student_portal' %}" class="action-card">
+                        <div class="action-icon">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>Scan QR Code</h5>
+                            <p>Mark your attendance quickly</p>
+                        </div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </a>
+                    
+                    <a href="{% url 'student_portal' %}" class="action-card">
+                        <div class="action-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>View Schedule</h5>
+                            <p>Check your class timetable</p>
+                        </div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </a>
+                    
+                    <a href="{% url 'student_portal' %}" class="action-card">
+                        <div class="action-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>View Analytics</h5>
+                            <p>Track your attendance stats</p>
+                        </div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </a>
+                    
+                    <a href="#" class="action-card" id="profileActionButton">
+                        <div class="action-icon">
+                            <i class="fas fa-user-cog"></i>
+                        </div>
+                        <div class="action-content">
+                            <h5>Profile Settings</h5>
+                            <p>Manage your account</p>
+                        </div>
+                        <div class="action-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
                     </a>
                 </div>
-            </div>
-        </section>
+            </section>
+        </div>
     </main>
 
-    <!-- Cyber Footer -->
-    <footer class="cyber-footer">
-        <div class="footer-container">
-            <div class="footer-grid">
+    <!-- Footer -->
+    <footer class="dashboard-footer">
+        <div class="container-fluid">
+            <div class="footer-content">
                 <div class="footer-brand">
-                    <div class="hologram-logo small">
-                        <div class="logo-core"></div>
-                        <i class="fas fa-fingerprint"></i>
+                    <div class="logo-container small">
+                        <div class="logo-icon">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <div class="brand-text">
+                            <h3 class="brand-name">Attendify</h3>
+                            <span class="brand-subtitle">Student Dashboard</span>
+                        </div>
                     </div>
-                    <span class="brand-name">ATTENDIFY</span>
-                    <p>Next-Gen Attendance System</p>
+                    <p>Advanced attendance management system</p>
                 </div>
                 
                 <div class="footer-links">
                     <div class="link-group">
-                        <h4>SYSTEM</h4>
+                        <h4>System</h4>
                         <a href="{% url 'student_portal' %}">Student Portal</a>
                         <a href="#" id="footerProfileLink">Profile</a>
                         <a href="#">Documentation</a>
                     </div>
                     
                     <div class="link-group">
-                        <h4>SUPPORT</h4>
+                        <h4>Support</h4>
                         <a href="#">Help Center</a>
                         <a href="#">Status</a>
                         <a href="#">Contact</a>
@@ -506,8 +528,8 @@
             </div>
             
             <div class="footer-bottom">
-                <p>&copy; 2025 ATTENDIFY SYSTEMS | VERSION 2.0.1</p>
-                <div class="tech-stack">
+                <p>&copy; 2025 Attendify Systems | Version 2.0.1</p>
+                <div class="tech-info">
                     <span>Powered by: Django • WebSocket • AES-256</span>
                 </div>
             </div>
@@ -584,8 +606,8 @@
                 passwordInput1.addEventListener('input', function() {
                     const password = this.value;
                     let strength = 0;
-                    let text = 'WEAK';
-                    let color = '#ff0033';
+                    let text = 'Weak';
+                    let color = '#ef4444';
                     
                     if (password.length >= 8) strength += 25;
                     if (/[A-Z]/.test(password)) strength += 25;
@@ -593,11 +615,11 @@
                     if (/[^A-Za-z0-9]/.test(password)) strength += 25;
                     
                     if (strength >= 75) {
-                        text = 'STRONG';
-                        color = '#00ff88';
+                        text = 'Strong';
+                        color = '#10b981';
                     } else if (strength >= 50) {
-                        text = 'MEDIUM';
-                        color = '#ffcc00';
+                        text = 'Medium';
+                        color = '#f59e0b';
                     }
                     
                     passwordStrength.style.width = strength + '%';

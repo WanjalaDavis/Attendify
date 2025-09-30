@@ -849,7 +849,7 @@ def student_portal(request):
 
 
 @student_required
-@csrf_exempt  # Keep this if mobile clients post without CSRF token; consider token auth for production
+@csrf_exempt  
 def scan_qr_code(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Invalid request method'}, status=405)
