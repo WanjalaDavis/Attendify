@@ -413,7 +413,7 @@ def system_logs(request):
 
 @lecturer_required
 def lecturer_dashboard(request):
-    lecturer = request.user.lecturer_profile
+    lecturer = request.user.lecturer_profile    
     today = timezone.now().date()
 
     # Lecturer's statistics
@@ -438,12 +438,19 @@ def lecturer_dashboard(request):
         is_active=True
     ).order_by('schedule_date', 'start_time').select_related('semester_unit__unit')
 
+    # --- NEW: preload forms for profile modal (no change to profile_edit view) ---
+    user_form = UserUpdateForm(instance=request.user)
+    profile_form = LecturerProfileForm(instance=lecturer)
+
     context = {
         'lecturer': lecturer,
         'teaching_units': teaching_units,
         'total_students': total_students,
         'todays_classes': todays_classes,
         'upcoming_classes': upcoming_classes,
+        # forms for modal
+        'user_form': user_form,
+        'profile_form': profile_form,
     }
     return render(request, 'lecturer/dashboard.html', context)
 

@@ -400,22 +400,32 @@ class ClassScheduleAdmin(admin.ModelAdmin):
 
 
 # QR Code Admin
+# @admin.register(QRCode)
 class QRCodeAdmin(admin.ModelAdmin):
-    list_display = ('class_schedule', 'token_short', 'generated_at', 'expires_at', 'is_active', 'is_expired')
+    list_display = (
+        'class_schedule',
+        'token_short',
+        'generated_at',
+        'expires_at',
+        'is_active',
+        'is_expired_display',
+    )
     list_filter = ('is_active', 'generated_at')
     search_fields = ('token', 'class_schedule__semester_unit__unit__code')
-    readonly_fields = ('token', 'generated_at', 'expires_at', 'is_expired', 'qr_code_preview')
+    readonly_fields = ('token', 'generated_at', 'expires_at', 'is_expired_display', 'qr_code_preview')
     exclude = ('qr_code_image',)
-    
+
     def token_short(self, obj):
         return obj.token[:20] + '...' if len(obj.token) > 20 else obj.token
     token_short.short_description = 'Token'
-    
-    def is_expired(self, obj):
-        return obj.is_expired
-    is_expired.boolean = True
-    is_expired.short_description = 'Is Expired'
-    
+
+    def is_expired_display(self, obj):
+        if not obj.expires_at:
+            return False  # or True, depending on your intended logic
+        return obj.is_expired()
+    is_expired_display.boolean = True
+    is_expired_display.short_description = 'Expired?'
+
     def qr_code_preview(self, obj):
         if obj.qr_code_image:
             return format_html('<img src="{}" width="200" height="200" />', obj.qr_code_image.url)

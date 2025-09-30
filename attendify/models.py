@@ -484,8 +484,8 @@ class QRCode(models.Model):
         null=True
     )
     is_active = models.BooleanField(default=True)
-    generated_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
+    generated_at = models.DateTimeField(auto_now_add=True)    
+    expires_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'qr_codes'
