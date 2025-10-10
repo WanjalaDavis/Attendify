@@ -1,0 +1,1163 @@
+{% load static %}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0">
+    <title>Lecturer Portal - Attendify</title>
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="{% static 'css/lecturer.css' %}">
+    <link rel="stylesheet" href="{% static 'css/lecturer_mo.css' %}">
+    <link rel="icon" href="{% static 'images/attendify_logo.png' %}" type="image/x-icon">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* Enhanced Padding System */
+        .text-padded { padding: 8px 12px; }
+        .card-text-padded { padding: 12px 16px; }
+        .section-text-padded { padding: 16px 20px; }
+        .header-text-padded { padding: 10px 15px; }
+        .btn-text-padded { padding: 10px 20px; }
+        .form-text-padded { padding: 10px 12px; }       
+        
+        /* QR Button States */
+        .generate-qr-btn {
+            transition: all 0.3s ease;
+            border: 2px solid;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 8px 16px;
+            min-width: 120px;
+        }
+        
+        .generate-qr-btn[data-status="ONGOING"] {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border-color: #4f46e5;
+            color: white;
+            cursor: pointer;
+        }
+        
+        .generate-qr-btn[data-status="ONGOING"]:hover {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        }
+        
+        .generate-qr-btn[data-status="UPCOMING"] {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: #f59e0b;
+            color: #f59e0b;
+            cursor: not-allowed;
+        }
+        
+        .generate-qr-btn[data-status="ENDED"] {
+            background: rgba(107, 114, 128, 0.1);
+            border-color: #6b7280;
+            color: #6b7280;
+            cursor: not-allowed;
+        }
+        
+        .generate-qr-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Status Indicators */
+        .class-status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-ongoing {
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
+        }
+        
+        .status-upcoming {
+            background: #f59e0b;
+            box-shadow: 0 0 10px #f59e0b;
+        }
+        
+        .status-ended {
+            background: #6b7280;
+            box-shadow: 0 0 10px #6b7280;
+        }
+
+        /* Enhanced Class Card Styling */
+        .class-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .class-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: rgba(79, 70, 229, 0.4);
+        }
+
+        .class-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .class-status {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .class-time-display {
+            font-size: 0.8rem;
+            color: #d1d5db;
+            margin-left: 12px;
+        }
+
+        .class-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.2);
+            transform: scale(1.05);
+        }
+
+        .class-content {
+            display: grid;
+            grid-template-columns: 60px 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+
+        .class-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(124, 58, 237, 0.2));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #4f46e5;
+        }
+
+        .class-details {
+            flex: 1;
+        }
+
+        .class-details h4 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: white;
+            margin: 0 0 8px 0;
+            line-height: 1.3;
+        }
+
+        .class-meta {
+            font-size: 0.9rem;
+            color: #d1d5db;
+            margin: 0 0 12px 0;
+            font-weight: 500;
+        }
+
+        .class-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .class-info .time {
+            background: rgba(79, 70, 229, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            color: #a5b4fc;
+            font-weight: 600;
+        }
+
+        .class-info .students {
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .class-info .students::before {
+            content: "👥";
+            font-size: 0.8rem;
+        }
+
+        /* Status-specific styling */
+        .class-card[data-status="ONGOING"] {
+            border-left: 4px solid #10b981;
+        }
+
+        .class-card[data-status="UPCOMING"] {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .class-card[data-status="ENDED"] {
+            border-left: 4px solid #6b7280;
+            opacity: 0.8;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .class-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .class-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .class-content {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .class-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+            
+            .class-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Matrix Background Canvas -->
+    <canvas id="matrixCanvas"></canvas>
+    
+    <!-- Cyber Grid Overlay -->
+    <div class="cyber-grid"></div>
+    
+    <!-- Navigation Header -->
+    <header class="portal-header">
+        <div class="header-container">
+            <div class="brand-section">
+                <div class="logo">
+                    <div class="cyber-logo">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <div class="glow-effect"></div>
+                    </div>
+                    <span class="brand-name header-text-padded">ATTENDIFY</span>
+                </div>
+                <h1 class="portal-title header-text-padded">LECTURER PORTAL</h1>
+            </div>
+            
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" alt="Profile">
+                        {% else %}
+                            <i class="fas fa-user-circle"></i>
+                        {% endif %}
+                        <div class="avatar-glow"></div>
+                    </div>
+                    <div class="user-details text-padded">
+                        <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+                        <span class="user-role">LECTURER</span>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <button class="btn-notification" id="notificationBtn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge">3</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn-profile-dropdown">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu cyber-dropdown">
+                            <a href="{% url 'profile_edit' %}" class="dropdown-item text-padded">
+                                <i class="fas fa-user-edit"></i>EDIT PROFILE
+                            </a>
+                            <a href="{% url 'change_password' %}" class="dropdown-item text-padded">
+                                <i class="fas fa-key"></i>CHANGE PASSWORD
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a href="{% url 'logout' %}" class="dropdown-item logout text-padded">
+                                <i class="fas fa-sign-out-alt"></i>LOGOUT
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Floating Navigation Tabs -->
+    <nav class="floating-nav">
+        <div class="nav-container">
+            <button class="nav-btn active" data-tab="classes" title="Class Management">
+                <div class="nav-icon"><i class="fas fa-calendar-alt"></i></div>
+                <span class="nav-label text-padded">Classes</span>
+            </button>
+            
+            <button class="nav-btn" data-tab="units" title="Teaching Units">
+                <div class="nav-icon"><i class="fas fa-book"></i></div>
+                <span class="nav-label text-padded">Units</span>
+            </button>
+            
+            <button class="nav-btn" data-tab="reports" title="Analytics & Reports">
+                <div class="nav-icon"><i class="fas fa-chart-line"></i></div>
+                <span class="nav-label text-padded">Reports</span>
+            </button>
+
+            <button class="nav-btn" data-tab="profile" title="My Profile">
+                <div class="nav-icon"><i class="fas fa-user"></i></div>
+                <span class="nav-label text-padded">Profile</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Portal Content -->
+    <main class="portal-main">
+        <div class="container-fluid">          
+
+            <!-- Welcome Section -->
+            <section class="welcome-section">
+                <div class="welcome-content section-text-padded">
+                    <h2 id="dynamic-greeting">Welcome, {{ user.first_name|default:"Professor" }}</h2>
+                    <p class="text-padded">Managing <strong>{{ units_count }}</strong> units with <strong>{{ total_students }}</strong> students</p>
+                </div>
+                <div class="welcome-visual">
+                    <div class="visual-card">
+                        <div class="visual-icon">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        </div>
+                        <div class="visual-text text-padded">
+                            <span>Active Lecturer</span>
+                            <small>Portal Access Granted</small>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Classes Tab -->
+            <section class="tab-content active" id="classes-tab">
+                <div class="content-grid">
+                    <!-- Class Scheduling Card -->
+                    <div class="content-card full-width">
+                        <div class="card-header">
+                            <h3 class="header-text-padded"><i class="fas fa-calendar-plus me-2"></i>Schedule New Class</h3>
+                            <span class="card-badge">Quick Setup</span>
+                        </div>
+                        <div class="card-body card-text-padded">
+                            <form id="schedule-class-form" method="POST" action="{% url 'schedule_class' %}">
+                                {% csrf_token %}
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="semester_unit" class="form-text-padded">Unit *</label>
+                                        <select name="semester_unit" id="semester_unit" class="form-select cyber-input form-text-padded" required>
+                                            <option value="">Select a unit</option>
+                                            {% for unit in units %}
+                                                <option value="{{ unit.id }}">
+                                                    {{ unit.code }} - {{ unit.name }} ({{ unit.enrolled_students_count }} students)
+                                                </option>
+                                            {% empty %}
+                                                <option value="" disabled>No units assigned</option>
+                                            {% endfor %}
+                                        </select>
+                                        
+                                        {% if not units %}
+                                        <div class="alert alert-warning mt-2">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            No teaching units assigned. Contact administration.
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="schedule_date" class="form-text-padded">Date *</label>
+                                        <input type="date" name="schedule_date" id="schedule_date" class="form-control cyber-input form-text-padded" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="start_time" class="form-text-padded">Start Time *</label>
+                                        <input type="time" name="start_time" id="start_time" class="form-control cyber-input form-text-padded" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="end_time" class="form-text-padded">End Time *</label>
+                                        <input type="time" name="end_time" id="end_time" class="form-control cyber-input form-text-padded" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="venue" class="form-text-padded">Venue *</label>
+                                        <div class="input-group">
+                                            <input type="text" name="venue" id="venue" class="form-control cyber-input form-text-padded" placeholder="e.g., Room 101, Main Building" required>
+                                            <button type="button" class="btn btn-outline-primary btn-text-padded" id="detect-location-btn">
+                                                <i class="fas fa-location-crosshairs"></i> Detect Location
+                                            </button>
+                                        </div>
+                                        <small class="form-text text-muted form-text-padded">Enter venue manually or use current location detection</small>
+                                    </div>
+                                    
+                                    <!-- Location Coordinates Section -->
+                                    <div class="form-group full-width">
+                                        <div class="location-section-header section-text-padded">
+                                            <h6><i class="fas fa-map-marker-alt me-2"></i>GPS Coordinates (Optional)</h6>
+                                            <div class="location-status" id="location-status">
+                                                <i class="fas fa-circle text-warning"></i>
+                                                <span>Location not detected</span>
+                                            </div>
+                                        </div>
+                                        <div class="coordinates-grid">
+                                            <div class="form-group">
+                                                <label for="latitude" class="form-text-padded">Latitude</label>
+                                                <div class="input-group">
+                                                    <input type="number" step="any" name="latitude" id="latitude" class="form-control cyber-input form-text-padded" placeholder="Auto-detected latitude">
+                                                    <span class="input-group-text form-text-padded"><i class="fas fa-globe-americas"></i></span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                                <label for="longitude" class="form-text-padded">Longitude</label>
+                                                <div class="input-group">
+                                                    <input type="number" step="any" name="longitude" id="longitude" class="form-control cyber-input form-text-padded" placeholder="Auto-detected longitude">
+                                                    <span class="input-group-text form-text-padded"><i class="fas fa-globe-americas"></i></span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                                <label for="location_radius" class="form-text-padded">Location Radius (meters)</label>
+                                                <div class="input-group">
+                                                    <input type="number" name="location_radius" id="location_radius" class="form-control cyber-input form-text-padded" value="100" min="10" max="500">
+                                                    <span class="input-group-text form-text-padded">m</span>
+                                                </div>
+                                                <small class="form-text text-muted form-text-padded">Allowed distance from class location (default: 100m)</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Location Actions -->
+                                        <div class="location-actions section-text-padded">
+                                            <button type="button" class="btn btn-success btn-sm btn-text-padded" id="get-current-location-btn">
+                                                <i class="fas fa-satellite-dish me-1"></i> Get Current Coordinates
+                                            </button>
+                                            <button type="button" class="btn btn-info btn-sm btn-text-padded" id="test-location-btn" disabled>
+                                                <i class="fas fa-map-marked-alt me-1"></i> Test Location Accuracy
+                                            </button>
+                                            <button type="button" class="btn btn-warning btn-sm btn-text-padded" id="clear-location-btn">
+                                                <i class="fas fa-eraser me-1"></i> Clear Coordinates
+                                            </button>
+                                        </div>
+                                        
+                                        <!-- Location Accuracy Display -->
+                                        <div class="location-accuracy section-text-padded" id="location-accuracy" style="display: none;">
+                                            <div class="accuracy-info">
+                                                <i class="fas fa-crosshairs"></i>
+                                                <div class="accuracy-details text-padded">
+                                                    <strong>Location Accuracy:</strong>
+                                                    <span id="accuracy-value">±0 meters</span>
+                                                    <small id="location-timestamp">Detected just now</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group full-width">
+                                        <label for="notes" class="form-text-padded">Additional Notes</label>
+                                        <textarea name="notes" id="notes" class="form-control cyber-input form-text-padded" rows="3" placeholder="Any special instructions..."></textarea>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions section-text-padded">
+                                    <button type="reset" class="btn-outline cyber-btn btn-text-padded" id="reset-form-btn">
+                                        <i class="fas fa-broom me-2"></i>Clear Form
+                                    </button>
+                                    <button type="submit" class="btn-primary cyber-btn btn-text-padded">
+                                        <i class="fas fa-save me-2"></i>Schedule Class
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Today's Classes Card -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3 class="header-text-padded"><i class="fas fa-calendar-day me-2"></i>Today's Classes</h3>
+                            <span class="card-badge">{{ todays_classes|length }} scheduled</span>
+                        </div>
+                        <div class="card-body card-text-padded">
+                            {% if todays_classes %}
+                                <div class="classes-list" id="todays-classes-list">
+                                    {% for class_data in todays_classes %}
+                                    <div class="class-card" 
+                                         data-class-id="{{ class_data.object.id }}"
+                                         data-schedule-date="{{ class_data.object.schedule_date|date:'Y-m-d' }}"
+                                         data-start-time="{{ class_data.object.start_time|time:'H:i:s' }}"
+                                         data-end-time="{{ class_data.object.end_time|time:'H:i:s' }}"
+                                         data-status="{{ class_data.status }}"
+                                         style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 20px; margin-bottom: 16px; backdrop-filter: blur(10px); border-left: 4px solid {% if class_data.status == 'ONGOING' %}#10b981{% elif class_data.status == 'UPCOMING' %}#f59e0b{% else %}#6b7280{% endif %};">
+                                        
+                                        <!-- Class Header with Status and Actions -->
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                                            <!-- Status Section -->
+                                            <div style="display: flex; align-items: center; font-size: 0.85rem; font-weight: 600;">
+                                                <span class="class-status-indicator status-{{ class_data.status|lower }}"></span>
+                                                <span style="text-transform: uppercase; color: {% if class_data.status == 'ONGOING' %}#10b981{% elif class_data.status == 'UPCOMING' %}#f59e0b{% else %}#6b7280{% endif %};">
+                                                    {{ class_data.status }}
+                                                </span>
+                                                <span style="font-size: 0.8rem; color: #d1d5db; margin-left: 12px;">
+                                                    {% if class_data.status == 'ONGOING' %}
+                                                        <span id="time-elapsed-{{ class_data.object.id }}"></span> elapsed
+                                                    {% elif class_data.status == 'UPCOMING' %}
+                                                        <span id="time-remaining-{{ class_data.object.id }}"></span> 
+                                                    {% else %}
+                                                        Class Ended
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                            
+                                            <!-- Actions Section -->
+                                            <div style="display: flex; gap: 8px; align-items: center;">
+                                                <!-- QR Button - Always Visible -->
+                                                <button class="generate-qr-btn" 
+                                                        data-class-id="{{ class_data.object.id }}"
+                                                        data-status="{{ class_data.status }}"
+                                                        style="transition: all 0.3s ease; border: 2px solid; font-size: 0.85rem; font-weight: 600; border-radius: 8px; padding: 8px 16px; min-width: 120px; {% if class_data.status == 'ONGOING' %}background: linear-gradient(135deg, #4f46e5, #7c3aed); border-color: #4f46e5; color: white; cursor: pointer;{% elif class_data.status == 'UPCOMING' %}background: rgba(245, 158, 11, 0.1); border-color: #f59e0b; color: #f59e0b; cursor: not-allowed;{% else %}background: rgba(107, 114, 128, 0.1); border-color: #6b7280; color: #6b7280; cursor: not-allowed;{% endif %}">
+                                                    {% if class_data.status == 'ONGOING' %}
+                                                        <i class="fas fa-qrcode"></i> Generate QR
+                                                    {% elif class_data.status == 'UPCOMING' %}
+                                                        <i class="fas fa-clock"></i> Not Started
+                                                    {% else %}
+                                                        <i class="fas fa-ban"></i> Class Ended
+                                                    {% endif %}
+                                                </button>
+                                                
+                                                <!-- Delete Button -->
+                                                <button class="delete-class-btn" 
+                                                        data-class-id="{{ class_data.object.id }}" 
+                                                        title="Delete Class"
+                                                        style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease;">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Class Content -->
+                                        <div style="display: grid; grid-template-columns: 60px 1fr; gap: 16px; align-items: start;">
+                                            <!-- Class Icon -->
+                                            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(124, 58, 237, 0.2)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #4f46e5;">
+                                                <i class="fas fa-{% if class_data.status == 'ONGOING' %}play-circle{% elif class_data.status == 'UPCOMING' %}clock{% else %}check-circle{% endif %}"></i>
+                                            </div>
+                                            
+                                            <!-- Class Details -->
+                                            <div>
+                                                <h4 style="font-size: 1.1rem; font-weight: 700; color: white; margin: 0 0 8px 0; line-height: 1.3;">
+                                                    {{ class_data.unit_name }}
+                                                </h4>
+                                                <p style="font-size: 0.9rem; color: #d1d5db; margin: 0 0 12px 0; font-weight: 500;">
+                                                    {{ class_data.unit_code }} | {{ class_data.venue }}
+                                                </p>
+                                                <div style="display: flex; gap: 20px; align-items: center; font-size: 0.85rem;">
+                                                    <span style="background: rgba(79, 70, 229, 0.2); padding: 4px 12px; border-radius: 20px; color: #a5b4fc; font-weight: 600;">
+                                                        {{ class_data.object.start_time|time:"H:i" }} - {{ class_data.object.end_time|time:"H:i" }}
+                                                    </span>
+                                                    <span style="color: #9ca3af; display: flex; align-items: center; gap: 6px;">
+                                                        👥 {{ class_data.enrolled_students_count }} students
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="empty-state section-text-padded">
+                                    <i class="fas fa-calendar-times fa-3x"></i>
+                                    <h4 class="text-padded">No classes scheduled for today</h4>
+                                    <p class="text-padded">Schedule a new class using the form</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Upcoming Classes Card -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3 class="header-text-padded"><i class="fas fa-calendar-week me-2"></i>Upcoming Classes</h3>
+                            <span class="card-badge">{{ upcoming_classes|length }} classes</span>
+                        </div>
+                        <div class="card-body card-text-padded">
+                            {% if upcoming_classes %}
+                                <div class="compact-list">
+                                    {% for class_data in upcoming_classes %}
+                                    <div class="compact-item text-padded class-card upcoming" 
+                                         data-class-id="{{ class_data.object.id }}"
+                                         data-schedule-date="{{ class_data.object.schedule_date|date:'Y-m-d' }}"
+                                         data-start-time="{{ class_data.object.start_time|time:'H:i:s' }}">
+                                        <div class="item-main">
+                                            <strong>{{ class_data.unit_code }}</strong>
+                                            <span>{{ class_data.object.schedule_date|date:"D, M d" }}</span>
+                                        </div>
+                                        <div class="item-meta">
+                                            {{ class_data.object.start_time|time:"H:i" }} | {{ class_data.object.venue }}
+                                            <span class="time-remaining" id="time-remaining-upcoming-{{ class_data.object.id }}">--:--</span>
+                                        </div>
+                                        <div class="item-actions">
+                                            <button class="btn-delete delete-class-btn" data-class-id="{{ class_data.object.id }}" title="Delete Class">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="empty-state small section-text-padded">
+                                    <i class="fas fa-wind"></i>
+                                    <p class="text-padded">No upcoming classes</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Completed Classes Card -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3 class="header-text-padded"><i class="fas fa-history me-2"></i>Recent Classes</h3>
+                            <span class="card-badge">Past 7 days</span>
+                        </div>
+                        <div class="card-body card-text-padded">
+                            {% if completed_classes %}
+                                <div class="compact-list">
+                                    {% for class_data in completed_classes %}
+                                    <div class="compact-item text-padded class-card completed">
+                                        <div class="item-main">
+                                            <strong>{{ class_data.unit_code }}</strong>
+                                            <span>{{ class_data.object.schedule_date|date:"D, M d" }}</span>
+                                        </div>
+                                        <div class="item-meta">
+                                            {{ class_data.object.start_time|time:"H:i" }} - {{ class_data.object.end_time|time:"H:i" }} | {{ class_data.object.venue }}
+                                            <span class="text-muted">Completed</span>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="empty-state small section-text-padded">
+                                    <i class="fas fa-check-circle"></i>
+                                    <p class="text-padded">No recent completed classes</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Units Tab -->
+            <section class="tab-content" id="units-tab">
+                <div class="content-grid">
+                    <!-- My Units Card -->
+                    <div class="content-card full-width">
+                        <div class="card-header">
+                            <h3 class="header-text-padded"><i class="fas fa-book me-2"></i>Teaching Units</h3>
+                            <span class="card-badge">{{ units_count }} assigned</span>
+                        </div>
+                        <div class="card-body card-text-padded">
+                            {% if units %}
+                                <div class="units-grid">
+                                    {% for unit in units %}
+                                    <div class="unit-card">
+                                        <div class="unit-header text-padded">
+                                            <h4>{{ unit.code }}</h4>
+                                            <span class="unit-credits">{{ unit.credit_hours }} credits</span>
+                                        </div>
+                                        <div class="unit-body text-padded">
+                                            <h5>{{ unit.name }}</h5>
+                                            <div class="unit-meta">
+                                                <div class="meta-item text-padded">
+                                                    <i class="fas fa-users"></i>
+                                                    <span>{{ unit.enrolled_students_count }} students</span>
+                                                </div>
+                                                <div class="meta-item text-padded">
+                                                    <i class="fas fa-calendar"></i>
+                                                    <span>{{ unit.semester }}</span>
+                                                </div>
+                                                <div class="meta-item text-padded">
+                                                    <i class="fas fa-building"></i>
+                                                    <span>{{ unit.department }}</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Unit Statistics -->
+                                            <div class="unit-stats">
+                                                <div class="stat text-padded">
+                                                    <span class="value">{{ unit.completed_classes }}</span>
+                                                    <span class="label">Classes Held</span>
+                                                </div>
+                                                <div class="stat text-padded">
+                                                    <span class="value">{{ unit.average_attendance }}%</span>
+                                                    <span class="label">Avg Attendance</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="unit-actions">
+                                            <button class="btn-outline view-unit-details btn-text-padded" data-unit-id="{{ unit.id }}">
+                                                <i class="fas fa-chart-bar me-1"></i> View Analytics
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="empty-state section-text-padded">
+                                    <i class="fas fa-book fa-3x"></i>
+                                    <h4 class="text-padded">No units assigned</h4>
+                                    <p class="text-padded">Contact administration for unit assignments</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Unit Details Card -->
+                    <div class="content-card full-width" id="unit-details-card" style="display: none;">
+                        <div class="card-header">
+                            <h3 class="header-text-padded"><i class="fas fa-analytics me-2"></i>Unit Analytics</h3>
+                            <button class="btn-icon" onclick="hideUnitDetails()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="card-body card-text-padded" id="unit-details-content">
+                            <!-- Dynamic content will be loaded by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Reports Tab -->
+            <section class="tab-content" id="reports-tab">
+                <div class="content-grid">
+                    <!-- Report Generation Card -->
+                    <div class="content-card full-width">
+                        <div class="card-header">
+                            <h3 class="header-text-padded"><i class="fas fa-chart-bar me-2"></i>Generate Attendance Report</h3>
+                            <span class="card-badge">Advanced Analytics</span>
+                        </div>
+                        <div class="card-body card-text-padded">
+                            <form id="report-generation-form" method="POST" action="{% url 'generate_report' %}">
+                                {% csrf_token %}
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="report_title" class="form-text-padded">Report Title *</label>
+                                        <input type="text" name="title" id="report_title" class="form-control cyber-input form-text-padded" placeholder="e.g., Monthly Attendance Report" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="report_unit" class="form-text-padded">Unit</label>
+                                        <select name="semester_unit" id="report_unit" class="form-select cyber-input form-text-padded">
+                                            <option value="">All Units</option>
+                                            {% for unit in units %}
+                                            <option value="{{ unit.id }}">{{ unit.code }} - {{ unit.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="start_date" class="form-text-padded">Start Date *</label>
+                                        <input type="date" name="start_date" id="start_date" class="form-control cyber-input form-text-padded" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="end_date" class="form-text-padded">End Date *</label>
+                                        <input type="date" name="end_date" id="end_date" class="form-control cyber-input form-text-padded" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="report_type" class="form-text-padded">Report Type</label>
+                                        <select name="report_type" id="report_type" class="form-select cyber-input form-text-padded">
+                                            <option value="summary">Summary Report</option>
+                                            <option value="detailed">Detailed Report</option>
+                                            <option value="analytics">Analytics Report</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group full-width">
+                                        <label for="report_notes" class="form-text-padded">Additional Filters</label>
+                                        <div class="filter-options section-text-padded">
+                                            <label class="checkbox-label text-padded">
+                                                <input type="checkbox" name="include_charts" checked> Include Charts
+                                            </label>
+                                            <label class="checkbox-label text-padded">
+                                                <input type="checkbox" name="include_trends" checked> Include Trends
+                                            </label>
+                                            <label class="checkbox-label text-padded">
+                                                <input type="checkbox" name="export_csv"> Export as CSV
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions section-text-padded">
+                                    <button type="button" class="btn-outline cyber-btn btn-text-padded" id="preview-report-btn">
+                                        <i class="fas fa-eye me-2"></i>Preview Report
+                                    </button>
+                                    <button type="submit" class="btn-primary cyber-btn btn-text-padded">
+                                        <i class="fas fa-download me-2"></i>Generate Report
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Generated Reports Card -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3 class="header-text-padded"><i class="fas fa-file-alt me-2"></i>Recent Reports</h3>
+                            <button class="btn-icon" id="refresh-reports-btn">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body card-text-padded">
+                            {% if reports %}
+                                <div class="reports-list">
+                                    {% for report in reports %}
+                                    <div class="report-item text-padded">
+                                        <div class="report-icon">
+                                            <i class="fas fa-file-pdf"></i>
+                                        </div>
+                                        <div class="report-info">
+                                            <h6>{{ report.title }}</h6>
+                                            <small>Generated {{ report.generated_at|timesince }} ago</small>
+                                            <div class="report-meta">
+                                                <span class="badge bg-{% if report.report_type == 'summary' %}primary{% elif report.report_type == 'detailed' %}info{% else %}success{% endif %}">
+                                                    {{ report.report_type|title }}
+                                                </span>
+                                                {% if report.is_generated %}
+                                                <span class="badge bg-success">Ready</span>
+                                                {% else %}
+                                                <span class="badge bg-warning">Processing</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="report-actions">
+                                            {% if report.is_generated %}
+                                            <button class="btn-icon" title="Download" onclick="downloadReport({{ report.id }})">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                            <button class="btn-icon" title="View" onclick="viewReport({{ report.id }})">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="empty-state small section-text-padded">
+                                    <i class="fas fa-file-alt"></i>
+                                    <p class="text-padded">No reports generated yet</p>
+                                    <small class="text-padded">Create your first report above</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Analytics Overview Card -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3 class="header-text-padded"><i class="fas fa-chart-pie me-2"></i>Attendance Overview</h3>
+                        </div>
+                        <div class="card-body card-text-padded">
+                            <div class="analytics-main">
+                                <div class="attendance-circle">
+                                    <div class="circle-progress" data-percentage="{{ overall_attendance_percentage|default:0 }}">
+                                        <div class="circle-inner">
+                                            <span class="percentage">{{ overall_attendance_percentage|default:0 }}%</span>
+                                            <span class="label">Overall</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="attendance-breakdown">
+                                    <div class="breakdown-item text-padded">
+                                        <span class="label">Total Students</span>
+                                        <span class="value">{{ total_students }}</span>
+                                    </div>
+                                    <div class="breakdown-item text-padded">
+                                        <span class="label">Average Present</span>
+                                        <span class="value">{{ present_students }}</span>
+                                    </div>
+                                    <div class="breakdown-item text-padded">
+                                        <span class="label">Classes Held</span>
+                                        <span class="value">{{ total_classes }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Profile Tab -->
+            <section class="tab-content" id="profile-tab">
+                <div class="content-grid">
+                    <!-- Profile Card -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3 class="header-text-padded"><i class="fas fa-user me-2"></i>Personal Information</h3>
+                            <a href="{% url 'profile_edit' %}" class="btn-outline btn-text-padded">
+                                <i class="fas fa-edit me-1"></i> Edit Profile
+                            </a>
+                        </div>
+                        <div class="card-body card-text-padded">
+                            <div class="profile-info">
+                                <div class="profile-avatar-large">
+                                    {% if user.profile_picture %}
+                                        <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
+                                    {% else %}
+                                        <img src="https://ui-avatars.com/api/?name={{ user.first_name|urlencode }}+{{ user.last_name|urlencode }}&background=4f46e5&color=fff&size=200" alt="{{ user.get_full_name }}">
+                                    {% endif %}
+                                </div>
+                                <div class="profile-details">
+                                    <div class="detail-group text-padded">
+                                        <label>Full Name</label>
+                                        <p>{{ user.first_name }} {{ user.last_name }}</p>
+                                    </div>                                    
+                                    <div class="detail-group text-padded">
+                                        <label>Email Address</label>
+                                        <p>{{ user.email }}</p>
+                                    </div>                                  
+                                    <div class="detail-group text-padded">
+                                        <label>Phone Number</label>
+                                        <p>{{ lecturer.phone_number|default:"Not provided" }}</p>
+                                    </div>                                   
+                                    {% if lecturer.qualifications %}
+                                    <div class="detail-group text-padded">
+                                        <label>Qualifications</label>
+                                        <p>{{ lecturer.qualifications }}</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Academic Stats Card -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3 class="header-text-padded"><i class="fas fa-graduation-cap me-2"></i>Teaching Statistics</h3>
+                        </div>
+                        <div class="card-body card-text-padded">
+                            <div class="academic-stats">
+                                <div class="academic-stat text-padded">
+                                    <div class="stat-icon primary">
+                                        <i class="fas fa-book"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">{{ units_count }}</div>
+                                        <div class="stat-label">Teaching Units</div>
+                                    </div>
+                                </div>
+                                <div class="academic-stat text-padded">
+                                    <div class="stat-icon success">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">{{ total_students }}</div>
+                                        <div class="stat-label">Total Students</div>
+                                    </div>
+                                </div>
+                                <div class="academic-stat text-padded">
+                                    <div class="stat-icon info">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">{{ total_classes }}</div>
+                                        <div class="stat-label">Classes Held</div>
+                                    </div>
+                                </div>
+                                <div class="academic-stat text-padded">
+                                    <div class="stat-icon warning">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">{{ overall_attendance_percentage|default:0 }}%</div>
+                                        <div class="stat-label">Avg Attendance</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- QR Code Modal -->
+    <div class="modal fade" id="qrCodeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content cyber-modal">
+                <div class="modal-header qr-modal-header section-text-padded">
+                    <h5 class="modal-title">
+                        <i class="fas fa-qrcode me-2"></i>QR Code Generated
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center section-text-padded">
+                    <div class="qr-code-display mb-3">
+                        <div id="modal-qr-code"></div>
+                    </div>
+                    <h6 id="qr-class-info" class="mb-2 text-padded"></h6>
+                    <p class="text-muted text-padded" id="qr-expiry-info"></p>
+                    <div class="alert alert-info mt-3 section-text-padded">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This QR code will expire in 5 minutes. Students can scan it to mark attendance.
+                    </div>
+                </div>
+                <div class="modal-footer section-text-padded">
+                    <button type="button" class="btn btn-secondary btn-text-padded" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary btn-text-padded" id="download-modal-qr">
+                        <i class="fas fa-download me-2"></i>Download QR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Class Confirmation Modal -->
+    <div class="modal fade" id="deleteClassModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content cyber-modal">
+                <div class="modal-header section-text-padded">
+                    <h5 class="modal-title text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body section-text-padded">
+                    <p>Are you sure you want to delete this class?</p>
+                    <div class="class-to-delete-info" id="class-to-delete-info">
+                        <!-- Class info will be populated here -->
+                    </div>
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        This action cannot be undone. All attendance records for this class will be lost.
+                    </div>
+                </div>
+                <div class="modal-footer section-text-padded">
+                    <button type="button" class="btn btn-secondary btn-text-padded" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger btn-text-padded" id="confirm-delete-btn">
+                        <i class="fas fa-trash me-2"></i>Delete Class
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Notifications Container -->
+    <div id="notifications-container" class="notifications-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p class="text-padded">Processing your request...</p>
+    </div>
+
+    <!-- Footer -->
+    <footer class="portal-footer">
+        <div class="container-fluid">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="logo-container small">
+                        <div class="logo-icon">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        </div>
+                        <div class="brand-text">
+                            <h3 class="brand-name">Attendify</h3>
+                            <span class="brand-subtitle">Lecturer Portal</span>
+                        </div>
+                    </div>
+                    <p class="text-padded">Academic attendance management system</p>
+                </div>
+                
+                <div class="footer-links">
+                    <div class="link-group">
+                        <h4 class="text-padded">Portal</h4>
+                        <a href="{% url 'lecturer_dashboard' %}" class="text-padded">Dashboard</a>
+                        <a href="{% url 'lecturer_portal' %}" class="text-padded">Portal</a>
+                    </div>
+                    
+                    <div class="link-group">
+                        <h4 class="text-padded">Support</h4>
+                        <a href="#" class="text-padded">Help Center</a>
+                        <a href="#" class="text-padded">System Status</a>
+                        <a href="#" class="text-padded">Contact Admin</a>
+                    </div>
+                </div>
+                
+                <div class="footer-status">
+                    <div class="status-indicator text-padded">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <span>Lecturer Mode Active</span>
+                    </div>
+                    <div class="user-id text-padded">{{ lecturer.staff_id|default:"STAFF-ID" }}</div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p class="text-padded">&copy; 2025 Attendify Systems | Lecturer Portal v2.1.0</p>
+                <div class="tech-info">
+                    <span class="text-padded">Secure Connection • Real-time Data • Encrypted QR</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>   
+    
+
+    <!-- Include your JavaScript files -->
+    <script src="{% static 'js/lecturer.js' %}"></script>
+    <script src="{% static 'js/lecturer_ma.js' %}"></script>
+    
+</body>
+</html>

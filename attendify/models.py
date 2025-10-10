@@ -3,6 +3,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 import uuid
 import os
 
@@ -147,7 +148,7 @@ class LecturerProfile(models.Model):
         related_name='lecturer_profile',
         limit_choices_to={'user_type': User.UserType.LECTURER}
     )
-    employee_id = models.CharField(max_length=20, unique=True)
+    employee_id = models.CharField(max_length=20, unique=True, blank=True, null=True)
     specialization = models.CharField(max_length=200, blank=True, null=True)
     qualifications = models.TextField(blank=True, null=True)
     date_joined = models.DateField(auto_now_add=True)
@@ -166,9 +167,12 @@ class LecturerProfile(models.Model):
     def save(self, *args, **kwargs):
         if not self.employee_id:
             last_lecturer = LecturerProfile.objects.order_by('-id').first()
-            if last_lecturer:
-                last_id = int(last_lecturer.employee_id[3:]) if last_lecturer.employee_id.startswith('EMP') else 0
-                new_id = last_id + 1
+            if last_lecturer and last_lecturer.employee_id:
+                try:
+                    last_id = int(last_lecturer.employee_id[3:]) if last_lecturer.employee_id.startswith('EMP') else 0
+                    new_id = last_id + 1
+                except (ValueError, IndexError):
+                    new_id = 1
             else:
                 new_id = 1
             self.employee_id = f"EMP{new_id:06d}"
@@ -216,6 +220,13 @@ class Course(models.Model):
     )
     duration_years = models.PositiveIntegerField(default=4)
     total_semesters = models.PositiveIntegerField(default=8)
+    
+    # Fixed: Added the missing field that was causing the error
+    credit_requirements = models.PositiveIntegerField(
+        default=120,
+        help_text="Total credit hours required for course completion"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -325,7 +336,7 @@ class StudentProfile(models.Model):
 
 class Enrollment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    student = models.ForeignKey(  #
+    student = models.ForeignKey(
         StudentProfile,
         on_delete=models.CASCADE,
         related_name='enrollments'  
@@ -447,8 +458,30 @@ class ClassSchedule(models.Model):
         return f"{self.semester_unit.unit.code} - {self.schedule_date} {self.start_time}"
 
     def clean(self):
-        if self.start_time >= self.end_time:
-            raise ValidationError("End time must be after start time")
+        """Fixed: Added None checks to prevent TypeError"""
+        errors = {}
+        
+        # Check if times are provided before comparison
+        if self.start_time is not None and self.end_time is not None:
+            if self.start_time >= self.end_time:
+                errors['end_time'] = 'End time must be after start time'
+        else:
+            # If times are not set, we can't validate the time comparison
+            # But we should ensure they are provided
+            if self.start_time is None:
+                errors['start_time'] = 'Start time is required'
+            if self.end_time is None:
+                errors['end_time'] = 'End time is required'
+        
+        # Validate date
+        if self.schedule_date:
+            if self.schedule_date < timezone.now().date():
+                errors['schedule_date'] = 'Class date cannot be in the past'
+        else:
+            errors['schedule_date'] = 'Schedule date is required'
+        
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def is_ongoing(self):
@@ -498,12 +531,10 @@ class QRCode(models.Model):
 
     @property
     def is_expired(self):
-     from django.utils import timezone
-     if not self.expires_at:
-        # Decide logic: if no expiry, we assume it's still valid
-        return False  
+        from django.utils import timezone
+        if not self.expires_at:
+            return False
         return timezone.now() > self.expires_at
-
 
     def save(self, *args, **kwargs):
         if not self.token:
@@ -567,26 +598,36 @@ class Attendance(models.Model):
     def save(self, *args, **kwargs):
         if not self.scan_time and not self.marked_by_lecturer:
             from django.utils import timezone
-            class_end = self.class_schedule.end_time
-            schedule_date = self.class_schedule.schedule_date
-            class_end_datetime = timezone.make_aware(
-                timezone.datetime.combine(schedule_date, class_end)
-            )
-            
-            if timezone.now() > class_end_datetime and self.status == self.AttendanceStatus.ABSENT:
-                self.status = self.AttendanceStatus.ABSENT
+            # Fixed: Added None checks for class schedule times
+            if (self.class_schedule and 
+                self.class_schedule.end_time and 
+                self.class_schedule.schedule_date):
+                
+                class_end = self.class_schedule.end_time
+                schedule_date = self.class_schedule.schedule_date
+                class_end_datetime = timezone.make_aware(
+                    timezone.datetime.combine(schedule_date, class_end)
+                )
+                
+                if timezone.now() > class_end_datetime and self.status == self.AttendanceStatus.ABSENT:
+                    self.status = self.AttendanceStatus.ABSENT
         super().save(*args, **kwargs)
 
     @property
     def was_late(self):
         if self.scan_time:
             from django.utils import timezone
-            class_start = self.class_schedule.start_time
-            schedule_date = self.class_schedule.schedule_date
-            class_start_datetime = timezone.make_aware(
-                timezone.datetime.combine(schedule_date, class_start)
-            )
-            return self.scan_time > class_start_datetime
+            # Fixed: Added None checks for class schedule times
+            if (self.class_schedule and 
+                self.class_schedule.start_time and 
+                self.class_schedule.schedule_date):
+                
+                class_start = self.class_schedule.start_time
+                schedule_date = self.class_schedule.schedule_date
+                class_start_datetime = timezone.make_aware(
+                    timezone.datetime.combine(schedule_date, class_start)
+                )
+                return self.scan_time > class_start_datetime
         return False
 
 class SystemLog(models.Model):

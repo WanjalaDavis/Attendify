@@ -31,7 +31,7 @@
                 
                 <div class="header-stats">
                     <div class="stat-item">
-                        <div class="stat-value">{{ present_classes }}</div>
+                        <div class="stat-value" id="header-present-count">{{ present_classes }}</div>
                         <div class="stat-label">Present</div>
                     </div>
                     <div class="stat-divider"></div>
@@ -41,39 +41,97 @@
                     </div>
                     <div class="stat-divider"></div>
                     <div class="stat-item">
-                        <div class="stat-value">{{ attendance_percentage }}%</div>
+                        <div class="stat-value" id="header-attendance-percentage">{{ attendance_percentage }}%</div>
                         <div class="stat-label">Attendance</div>
                     </div>
                 </div>
                 
                 <div class="user-section">
                     <div class="user-avatar">
-                        <img src="https://ui-avatars.com/api/?name={{ user.first_name }}+{{ user.last_name }}&background=4f46e5&color=fff&bold=true" alt="{{ user.last_name }}">
+                        {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ user.first_name|urlencode }}+{{ user.last_name|urlencode }}&background=4f46e5&color=fff&bold=true" alt="{{ user.get_full_name }}">
+                        {% endif %}
                     </div>
                     <div class="user-info">
                         <div class="user-name">{{ user.first_name }} {{ user.last_name }}</div>
                         <div class="user-id">{{ student.registration_number }}</div>
                     </div>
                     <div class="header-actions">
-                        <a href="{% url 'student_dashboard' %}" class="action-btn">
-                            <i class="fas fa-home"></i>
-                        </a>
-                        <a href="{% url 'logout' %}" class="action-btn logout">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </a>
+                        <div class="dropdown">
+                            <button class="action-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'student_dashboard' %}"><i class="fas fa-home me-2"></i>Dashboard</a></li>
+                                <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="fas fa-user me-2"></i>My Profile</a></li>
+                                <li><a class="dropdown-item" href="{% url 'profile_edit' %}"><i class="fas fa-edit me-2"></i>Edit Profile</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form action="{% url 'logout' %}" method="POST" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </header>
 
+    <!-- Floating Navigation Tabs -->
+    <nav class="floating-nav">
+        <div class="nav-container">
+            <button class="nav-btn active" data-tab="classes" title="Today's Classes">
+                <div class="nav-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <span class="nav-label">Classes</span>
+            </button>
+            
+            <button class="nav-btn" data-tab="attendance" title="QR Attendance">
+                <div class="nav-icon">
+                    <i class="fas fa-qrcode"></i>
+                </div>
+                <span class="nav-label">Attendance</span>
+            </button>
+            
+            <button class="nav-btn" data-tab="units" title="My Units">
+                <div class="nav-icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <span class="nav-label">Units</span>
+            </button>
+            
+            <button class="nav-btn" data-tab="analytics" title="Analytics">
+                <div class="nav-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <span class="nav-label">Analytics</span>
+            </button>
+
+            <button class="nav-btn" data-tab="profile" title="My Profile">
+                <div class="nav-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <span class="nav-label">Profile</span>
+            </button>
+        </div>
+    </nav>
+
     <!-- Main Content -->
     <main class="portal-main">
         <div class="container-fluid">
-            <div class="welcome-section">
+            <!-- Welcome Section -->
+            <section class="welcome-section">
                 <div class="welcome-content">
-                    <h2>Welcome back, {{ user.first_name }}</h2>
-                    <p>You have {{ todays_classes.count }} classes today with {{ attendance_percentage }}% overall attendance</p>
+                    <h2 id="dynamic-greeting">Welcome back, {{ user.first_name }}</h2>
+                    <p>You have <strong id="todays-classes-count">{{ todays_classes.count }}</strong> classes today with <strong id="welcome-attendance-percentage">{{ attendance_percentage }}%</strong> overall attendance</p>
                 </div>
                 <div class="welcome-visual">
                     <div class="visual-card">
@@ -86,116 +144,106 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
             
-            <!-- Navigation Tabs -->
-            <div class="navigation-tabs p-3">
-                <div class="tabs-container">
-                    <button class="nav-tab active" data-tab="classes">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Today's Classes</span>
-                    </button>
-                    <button class="nav-tab" data-tab="attendance">
-                        <i class="fas fa-qrcode"></i>
-                        <span>Attendance</span>
-                    </button>
-                    <button class="nav-tab" data-tab="units">
-                        <i class="fas fa-book"></i>
-                        <span>My Units</span>
-                    </button>
-                    <button class="nav-tab" data-tab="analytics">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Analytics</span>
-                    </button>
-                </div>
-            </div>
+            <!-- Tab Content Sections -->
             
-            <!-- Tab Content -->
-            <div class="tab-content active" id="classes-tab">
+            <!-- Classes Tab -->
+            <section class="tab-content active" id="classes-tab">
                 <div class="content-grid">
-                    <!-- Today's Classes -->
-                    <div class="content-card full-width p-3">
+                    <!-- Today's Classes Card -->
+                    <div class="content-card full-width">
                         <div class="card-header">
-                            <h3>Today's Classes</h3>
+                            <h3><i class="fas fa-calendar-day me-2"></i>Today's Classes</h3>
                             <span class="card-badge">{{ todays_classes.count }} scheduled</span>
                         </div>
                         <div class="card-body">
-                            <div id="todays-classes-container">
-                                {% if todays_classes %}
-                                    <div class="classes-list" id="todays-classes-list">
-                                        {% for class in todays_classes %}
-                                        <div class="class-card {% if class.is_ongoing %}ongoing{% else %}upcoming{% endif %}" 
-                                             data-class-id="{{ class.id }}"
-                                             data-start-time="{{ class.start_time|time:'H:i:s' }}"
-                                             data-end-time="{{ class.end_time|time:'H:i:s' }}">
-                                            <div class="class-status-indicator"></div>
-                                            <div class="class-icon">
-                                                <i class="fas fa-{% if class.is_ongoing %}play-circle{% else %}clock{% endif %}"></i>
-                                            </div>
-                                            <div class="class-details">
-                                                <h4>{{ class.semester_unit.unit.name }}</h4>
-                                                <p class="class-meta">{{ class.semester_unit.unit.code }} | {{ class.venue }}</p>
-                                                <div class="class-info">
-                                                    <span class="time">{{ class.start_time|time:"H:i" }} - {{ class.end_time|time:"H:i" }}</span>
-                                                    <span class="lecturer">Dr. {{ class.lecturer.user.last_name }}</span>
-                                                </div>
-                                            </div>
-                                            <div class="class-actions">
-                                                {% if class.is_ongoing %}
-                                                    <span class="status-badge live">Live</span>
-                                                    <a href="#qr-scanner" class="btn-primary" onclick="showTab('attendance')">
-                                                        Scan QR
-                                                    </a>
-                                                {% else %}
-                                                    <span class="status-badge upcoming">Upcoming</span>
-                                                    <div class="countdown-timer" id="countdown-{{ class.id }}"></div>
-                                                {% endif %}
+                            {% if todays_classes %}
+                                <div class="classes-list" id="todays-classes-list">
+                                    {% for class in todays_classes %}
+                                    <div class="class-card {% if class.is_ongoing %}ongoing{% else %}upcoming{% endif %}" 
+                                         data-class-id="{{ class.id }}"
+                                         data-start-time="{{ class.start_time|time:'H:i:s' }}"
+                                         data-end-time="{{ class.end_time|time:'H:i:s' }}"
+                                         data-schedule-date="{{ class.schedule_date|date:'Y-m-d' }}"
+                                         data-unit-code="{{ class.semester_unit.unit.code }}"
+                                         data-unit-name="{{ class.semester_unit.unit.name }}"
+                                         data-venue="{{ class.venue }}"
+                                         data-lecturer="Dr. {{ class.lecturer.user.last_name }}">
+                                        <div class="class-status-indicator"></div>
+                                        <div class="class-icon">
+                                            <i class="fas fa-{% if class.is_ongoing %}play-circle{% else %}clock{% endif %}"></i>
+                                        </div>
+                                        <div class="class-details">
+                                            <h4>{{ class.semester_unit.unit.name }}</h4>
+                                            <p class="class-meta">{{ class.semester_unit.unit.code }} | {{ class.venue }}</p>
+                                            <div class="class-info">
+                                                <span class="time">{{ class.start_time|time:"H:i" }} - {{ class.end_time|time:"H:i" }}</span>
+                                                <span class="lecturer">Dr. {{ class.lecturer.user.last_name }}</span>
                                             </div>
                                         </div>
-                                        {% endfor %}
+                                        <div class="class-actions">
+                                            {% if class.is_ongoing %}
+                                                {% if class.id in attended_class_ids %}
+                                                    <span class="status-badge success">Attendance Marked</span>
+                                                    <button class="btn-success" disabled>
+                                                        <i class="fas fa-check"></i> Already Marked
+                                                    </button>
+                                                {% else %}
+                                                    <span class="status-badge live">Live</span>
+                                                    <button class="btn-primary scan-from-classes" data-class-id="{{ class.id }}">
+                                                        <i class="fas fa-qrcode"></i> Scan QR
+                                                    </button>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="status-badge upcoming">Upcoming</span>
+                                                <div class="countdown-timer" id="countdown-{{ class.id }}"></div>
+                                            {% endif %}
+                                        </div>
                                     </div>
-                                {% else %}
-                                    <div class="empty-state">
-                                        <i class="fas fa-calendar-times"></i>
-                                        <h4>No classes scheduled for today</h4>
-                                        <p>Enjoy your day off or check upcoming classes</p>
-                                    </div>
-                                {% endif %}
-                            </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="empty-state">
+                                    <i class="fas fa-calendar-times fa-3x"></i>
+                                    <h4>No classes scheduled for today</h4>
+                                    <p>Enjoy your day off or check upcoming classes</p>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                     
-                    <!-- Quick Stats -->
-                    <div class="content-card p-3">
+                    <!-- Quick Stats Card -->
+                    <div class="content-card">
                         <div class="card-header">
-                            <h3>Quick Stats</h3>
+                            <h3><i class="fas fa-chart-bar me-2"></i>Quick Stats</h3>
                         </div>
                         <div class="card-body">
                             <div class="stats-grid">
                                 <div class="stat-card">
-                                    <div class="stat-icon">
+                                    <div class="stat-icon primary">
                                         <i class="fas fa-calendar-check"></i>
                                     </div>
                                     <div class="stat-content">
-                                        <div class="stat-value">{{ total_classes }}</div>
+                                        <div class="stat-value" id="stats-total-classes">{{ total_classes }}</div>
                                         <div class="stat-label">Total Classes</div>
                                     </div>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="stat-icon">
+                                    <div class="stat-icon success">
                                         <i class="fas fa-user-check"></i>
                                     </div>
                                     <div class="stat-content">
-                                        <div class="stat-value">{{ present_classes }}</div>
+                                        <div class="stat-value" id="stats-present-classes">{{ present_classes }}</div>
                                         <div class="stat-label">Present</div>
                                     </div>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="stat-icon">
+                                    <div class="stat-icon info">
                                         <i class="fas fa-chart-pie"></i>
                                     </div>
                                     <div class="stat-content">
-                                        <div class="stat-value">{{ attendance_percentage }}%</div>
+                                        <div class="stat-value" id="stats-attendance-percentage">{{ attendance_percentage }}%</div>
                                         <div class="stat-label">Rate</div>
                                     </div>
                                 </div>
@@ -203,10 +251,10 @@
                         </div>
                     </div>
                     
-                    <!-- Upcoming Classes -->
-                    <div class="content-card p-3">
+                    <!-- Upcoming Classes Card -->
+                    <div class="content-card">
                         <div class="card-header">
-                            <h3>Upcoming Classes</h3>
+                            <h3><i class="fas fa-calendar-week me-2"></i>Upcoming Classes</h3>
                             <span class="card-badge">{{ upcoming_classes.count }} classes</span>
                         </div>
                         <div class="card-body">
@@ -223,6 +271,11 @@
                                         </div>
                                     </div>
                                     {% endfor %}
+                                    {% if upcoming_classes.count > 5 %}
+                                    <div class="compact-item view-more">
+                                        <a href="javascript:void(0)" onclick="showTab('units')">View all upcoming classes</a>
+                                    </div>
+                                    {% endif %}
                                 </div>
                             {% else %}
                                 <div class="empty-state small">
@@ -233,16 +286,16 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
             
             <!-- Attendance Tab -->
-            <div class="tab-content" id="attendance-tab">
+            <section class="tab-content" id="attendance-tab">
                 <div class="content-grid">
-                    <!-- QR Scanner -->
-                    <div class="content-card full-width p-3">
+                    <!-- QR Scanner Card -->
+                    <div class="content-card full-width">
                         <div class="card-header">
-                            <h3>QR Attendance System</h3>
-                            <span class="card-badge">Secure</span>
+                            <h3><i class="fas fa-qrcode me-2"></i>QR Attendance System</h3>
+                            <span class="card-badge">Live</span>
                         </div>
                         <div class="card-body">
                             <div class="scanner-layout">
@@ -254,7 +307,47 @@
                                     <div class="ongoing-classes-section">
                                         <h5>Available for Scanning:</h5>
                                         <div id="ongoing-classes-list" class="ongoing-classes-list">
-                                            <!-- Dynamic content will be loaded here -->
+                                            {% for class in ongoing_classes %}
+                                            <div class="ongoing-class-item {% if class.id in attended_class_ids %}attendance-marked{% endif %}" 
+                                                 data-class-id="{{ class.id }}"
+                                                 data-unit-code="{{ class.semester_unit.unit.code }}"
+                                                 data-unit-name="{{ class.semester_unit.unit.name }}"
+                                                 data-start-time="{{ class.start_time|time:'H:i:s' }}"
+                                                 data-end-time="{{ class.end_time|time:'H:i:s' }}"
+                                                 data-venue="{{ class.venue }}"
+                                                 data-lecturer="Dr. {{ class.lecturer.user.last_name }}">
+                                                <div class="class-info">
+                                                    <strong>{{ class.semester_unit.unit.code }}</strong>
+                                                    <span>{{ class.semester_unit.unit.name }}</span>
+                                                    <small>{{ class.start_time|time:"H:i" }} - {{ class.end_time|time:"H:i" }} | {{ class.venue }}</small>
+                                                    {% if class.id in attended_class_ids %}
+                                                    <div class="attendance-marked-badge">
+                                                        <i class="fas fa-check-circle"></i> Attendance Marked
+                                                    </div>
+                                                    {% else %}
+                                                    <div class="time-remaining-badge" id="time-remaining-{{ class.id }}">
+                                                        <i class="fas fa-clock"></i>
+                                                        <span>Calculating...</span>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="class-action">
+                                                    {% if class.id in attended_class_ids %}
+                                                        <button class="btn-success small" disabled>
+                                                            <i class="fas fa-check"></i> Marked
+                                                        </button>
+                                                    {% else %}
+                                                        <button class="btn-primary small select-class-btn">Select</button>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% empty %}
+                                            <div class="empty-state small">
+                                                <i class="fas fa-clock"></i>
+                                                <p>No ongoing classes available for scanning</p>
+                                                <small>Classes must be currently in session to mark attendance</small>
+                                            </div>
+                                            {% endfor %}
                                         </div>
                                     </div>
 
@@ -263,8 +356,13 @@
                                             <div class="scanner-overlay">
                                                 <div class="scanner-laser"></div>
                                             </div>
-                                            <video id="qr-video" class="scanner-video" style="display: none;"></video>
-                                            <canvas id="qr-canvas" class="scanner-canvas" style="display: none;"></canvas>
+                                            <video id="qr-video" class="scanner-video" playsinline></video>
+                                            <canvas id="qr-canvas" class="scanner-canvas"></canvas>
+                                            <div class="scanner-placeholder" id="scanner-placeholder">
+                                                <i class="fas fa-camera fa-3x"></i>
+                                                <p>Camera preview will appear here</p>
+                                                <small>Select a class and start scanning</small>
+                                            </div>
                                         </div>
                                         
                                         <div class="scanner-controls">
@@ -277,6 +375,10 @@
                                                 Upload QR Image
                                             </button>
                                             <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
+                                            <button class="btn-outline" id="stop-scanner" style="display: none;">
+                                                <i class="fas fa-stop"></i>
+                                                Stop Scanner
+                                            </button>
                                         </div>
                                     </div>
 
@@ -291,9 +393,11 @@
                                                     id="qr-token-input" 
                                                     name="qr_token" 
                                                     class="form-input" 
-                                                    placeholder="Enter QR Token" 
+                                                    placeholder="Enter QR Token (usually 32+ characters)" 
                                                     required
                                                     disabled
+                                                    pattern=".{10,}"
+                                                    title="QR token should be at least 10 characters"
                                                 >
                                                 <div class="input-status" id="token-input-status">
                                                     <i class="fas fa-info-circle"></i>
@@ -304,13 +408,21 @@
                                                 <i class="fas fa-key"></i> Submit Token
                                             </button>
                                         </form>
-                                        <div id="qr-token-status" class="status-indicator" style="margin-top:10px;"></div>
+                                        <div id="qr-token-status" class="status-indicator"></div>
                                     </div>
 
                                     <div class="scanner-status" id="scanner-status">
                                         <div class="status-indicator">
                                             <i class="fas fa-circle"></i>
                                             <span>Select a class to begin scanning</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Scan Results -->
+                                    <div class="scan-results" id="scan-results" style="display: none;">
+                                        <h4>Scan Result</h4>
+                                        <div class="result-card" id="result-card">
+                                            <!-- Dynamic content will be loaded here -->
                                         </div>
                                     </div>
                                 </div>
@@ -322,21 +434,21 @@
                                             <div class="step-number">1</div>
                                             <div class="step-content">
                                                 <strong>Select Ongoing Class</strong>
-                                                <p>Choose from available live classes</p>
+                                                <p>Choose from available live classes above</p>
                                             </div>
                                         </div>
                                         <div class="protocol-step">
                                             <div class="step-number">2</div>
                                             <div class="step-content">
                                                 <strong>Position QR Code</strong>
-                                                <p>Ensure QR code is clearly visible</p>
+                                                <p>Ensure QR code is clearly visible in camera</p>
                                             </div>
                                         </div>
                                         <div class="protocol-step">
                                             <div class="step-number">3</div>
                                             <div class="step-content">
                                                 <strong>Auto-Capture</strong>
-                                                <p>System automatically detects and scans</p>
+                                                <p>System automatically detects and scans QR code</p>
                                             </div>
                                         </div>
                                         <div class="protocol-step">
@@ -351,10 +463,10 @@
                                     <div class="security-features">
                                         <h5>Security Features</h5>
                                         <div class="security-tags">
-                                            <span class="security-tag">AES-256 Encryption</span>
                                             <span class="security-tag">Token Expiry</span>
                                             <span class="security-tag">GPS Validation</span>
                                             <span class="security-tag">Time Window</span>
+                                            <span class="security-tag">Single Use</span>
                                         </div>
                                     </div>
 
@@ -365,61 +477,82 @@
                                             <div id="selected-class-name" class="class-name"></div>
                                             <div id="selected-class-time" class="class-time"></div>
                                             <div id="selected-class-venue" class="class-venue"></div>
+                                            <div id="selected-class-lecturer" class="class-lecturer"></div>
                                             <div class="time-remaining" id="time-remaining">
                                                 <i class="fas fa-clock"></i>
                                                 <span id="remaining-time-text"></span>
                                             </div>
                                         </div>
+                                        <button class="btn-outline small" id="change-class-btn" style="margin-top: 10px;">
+                                            <i class="fas fa-times"></i> Change Class
+                                        </button>
+                                    </div>
+
+                                    <!-- Location Status -->
+                                    <div class="location-status" id="location-status">
+                                        <h5>Location Services</h5>
+                                        <div class="status-indicator">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                            <span id="location-status-text">Location access required for validation</span>
+                                        </div>
+                                        <small>Your location helps verify you're in the correct classroom</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Recent Attendance -->
-                    <div class="content-card p-3">
+                    <!-- Recent Attendance Card -->
+                    <div class="content-card">
                         <div class="card-header">
-                            <h3>Recent Scans</h3>
+                            <h3><i class="fas fa-history me-2"></i>Recent Scans</h3>
+                            <button class="btn-icon" id="refresh-recent-attendance">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
                         </div>
                         <div class="card-body">
-                            {% if attendances %}
-                                <div class="attendance-history">
-                                    {% for attendance in attendances|slice:":5" %}
-                                    <div class="attendance-item {% if attendance.status == 'PRESENT' %}present{% elif attendance.status == 'LATE' %}late{% else %}absent{% endif %}">
-                                        <div class="attendance-icon">
-                                            <i class="fas fa-{% if attendance.status == 'PRESENT' %}check-circle{% elif attendance.status == 'LATE' %}clock{% else %}times-circle{% endif %}"></i>
+                            <div id="recent-attendance-content">
+                                {% if recent_attendances %}
+                                    <div class="attendance-history">
+                                        {% for attendance in recent_attendances %}
+                                        <div class="attendance-item {% if attendance.status == 'PRESENT' %}present{% elif attendance.status == 'LATE' %}late{% else %}absent{% endif %}">
+                                            <div class="attendance-icon">
+                                                <i class="fas fa-{% if attendance.status == 'PRESENT' %}check-circle{% elif attendance.status == 'LATE' %}clock{% else %}times-circle{% endif %}"></i>
+                                            </div>
+                                            <div class="attendance-info">
+                                                <strong>{{ attendance.class_schedule.semester_unit.unit.code }}</strong>
+                                                <span>{{ attendance.class_schedule.schedule_date|date:"M d" }}</span>
+                                                <small>{{ attendance.class_schedule.semester_unit.unit.name }}</small>
+                                            </div>
+                                            <div class="attendance-status">
+                                                <span class="status-badge {{ attendance.status|lower }}">{{ attendance.status }}</span>
+                                                {% if attendance.scan_time %}
+                                                    <small>{{ attendance.scan_time|time:"H:i" }}</small>
+                                                {% endif %}
+                                            </div>
                                         </div>
-                                        <div class="attendance-info">
-                                            <strong>{{ attendance.class_schedule.semester_unit.unit.code }}</strong>
-                                            <span>{{ attendance.class_schedule.schedule_date|date:"M d" }}</span>
-                                        </div>
-                                        <div class="attendance-status">
-                                            <span class="status-badge {{ attendance.status|lower }}">{{ attendance.status }}</span>
-                                            {% if attendance.scan_time %}
-                                                <small>{{ attendance.scan_time|time:"H:i" }}</small>
-                                            {% endif %}
-                                        </div>
+                                        {% endfor %}
                                     </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <div class="empty-state small">
-                                    <i class="fas fa-ban"></i>
-                                    <p>No attendance records</p>
-                                </div>
-                            {% endif %}
+                                {% else %}
+                                    <div class="empty-state small">
+                                        <i class="fas fa-ban"></i>
+                                        <p>No attendance records</p>
+                                        <small>Scan a QR code to mark your first attendance</small>
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
             
             <!-- Units Tab -->
-            <div class="tab-content" id="units-tab">
+            <section class="tab-content" id="units-tab">
                 <div class="content-grid">
-                    <!-- My Units -->
-                    <div class="content-card full-width p-3">
+                    <!-- My Units Card -->
+                    <div class="content-card full-width">
                         <div class="card-header">
-                            <h3>Enrolled Units</h3>
+                            <h3><i class="fas fa-book me-2"></i>Enrolled Units</h3>
                             <span class="card-badge">{{ unit_enrollments.count }} active</span>
                         </div>
                         <div class="card-body">
@@ -442,23 +575,26 @@
                                                     <i class="fas fa-calendar"></i>
                                                     <span>{{ enrollment.semester_unit.semester.name }}</span>
                                                 </div>
-                                            </div>
-                                            
-                                            {% if unit_attendance and unit_attendance.unit_id == enrollment.semester_unit.unit.id %}
-                                            <div class="unit-stats">
-                                                <div class="unit-stat">
-                                                    <span>Attendance</span>
-                                                    <div class="progress-bar">
-                                                        <div class="progress-fill" style="width: {{ unit_attendance.attendance_percentage }}%"></div>
-                                                    </div>
-                                                    <span>{{ unit_attendance.attendance_percentage }}%</span>
+                                                <div class="meta-item">
+                                                    <i class="fas fa-chart-bar"></i>
+                                                    <span>Attendance: {{ enrollment.attendance_percentage }}%</span>
                                                 </div>
                                             </div>
-                                            {% endif %}
+                                            
+                                            <!-- Unit Progress -->
+                                            <div class="unit-progress">
+                                                <div class="progress-info">
+                                                    <span>Attendance Progress</span>
+                                                    <span>{{ enrollment.attendance_percentage }}%</span>
+                                                </div>
+                                                <div class="progress-bar">
+                                                    <div class="progress-fill" style="width: {{ enrollment.attendance_percentage }}%"></div>
+                                                </div>
+                                            </div>
                                         </div>
                                         <div class="unit-actions">
-                                            <button class="btn-link view-attendance" data-unit-id="{{ enrollment.semester_unit.id }}">
-                                                View Attendance
+                                            <button class="btn-outline view-unit-details" data-unit-id="{{ enrollment.semester_unit.id }}">
+                                                <i class="fas fa-chart-bar me-1"></i> View Analytics
                                             </button>
                                         </div>
                                     </div>
@@ -466,7 +602,7 @@
                                 </div>
                             {% else %}
                                 <div class="empty-state">
-                                    <i class="fas fa-book"></i>
+                                    <i class="fas fa-book fa-3x"></i>
                                     <h4>No units enrolled</h4>
                                     <p>Contact your administrator for unit enrollment</p>
                                 </div>
@@ -474,35 +610,35 @@
                         </div>
                     </div>
 
-                    <!-- Unit Details (Dynamic) -->
-                    <div class="content-card" id="unit-details-card" style="display: none;">
+                    <!-- Unit Details Card -->
+                    <div class="content-card full-width" id="unit-details-card" style="display: none;">
                         <div class="card-header">
-                            <h3>Unit Analytics</h3>
+                            <h3><i class="fas fa-analytics me-2"></i>Unit Analytics</h3>
                             <button class="btn-icon" onclick="hideUnitDetails()">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
                         <div class="card-body" id="unit-details-content">
-                            <!-- Dynamic content will be loaded here -->
+                            <!-- Dynamic content will be loaded by JavaScript -->
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
             
             <!-- Analytics Tab -->
-            <div class="tab-content" id="analytics-tab">
+            <section class="tab-content" id="analytics-tab">
                 <div class="content-grid">
-                    <!-- Attendance Overview -->
-                    <div class="content-card p-3">
+                    <!-- Attendance Overview Card -->
+                    <div class="content-card">
                         <div class="card-header">
-                            <h3>Attendance Overview</h3>
+                            <h3><i class="fas fa-chart-pie me-2"></i>Attendance Overview</h3>
                         </div>
                         <div class="card-body">
                             <div class="analytics-main">
                                 <div class="attendance-circle">
                                     <div class="circle-progress" data-percentage="{{ attendance_percentage }}">
                                         <div class="circle-inner">
-                                            <span class="percentage">{{ attendance_percentage }}%</span>
+                                            <span class="percentage" id="analytics-percentage">{{ attendance_percentage }}%</span>
                                             <span class="label">Overall</span>
                                         </div>
                                     </div>
@@ -510,114 +646,273 @@
                                 <div class="attendance-breakdown">
                                     <div class="breakdown-item">
                                         <span class="label">Present</span>
-                                        <span class="value">{{ present_classes }}</span>
+                                        <span class="value" id="analytics-present">{{ present_classes }}</span>
                                     </div>
                                     <div class="breakdown-item">
                                         <span class="label">Late</span>
-                                        <span class="value">{{ attendances|length|add:"-present_classes" }}</span>
+                                        <span class="value" id="analytics-late">{{ late_count|default:0 }}</span>
+                                    </div>
+                                    <div class="breakdown-item">
+                                        <span class="label">Absent</span>
+                                        <span class="value" id="analytics-absent">{{ absent_count|default:0 }}</span>
                                     </div>
                                     <div class="breakdown-item">
                                         <span class="label">Total</span>
-                                        <span class="value">{{ total_classes }}</span>
+                                        <span class="value" id="analytics-total">{{ total_classes }}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Performance Trends -->
-                    <div class="content-card p-3">
+                    <!-- Performance Trends Card -->
+                    <div class="content-card">
                         <div class="card-header">
-                            <h3>Weekly Trend</h3>
+                            <h3><i class="fas fa-chart-line me-2"></i>Weekly Trend</h3>
                         </div>
                         <div class="card-body">
                             <div class="trend-chart">
-                                <div class="chart-bars">
-                                    <div class="chart-bar-trend" style="height: 80%">
-                                        <span class="bar-label">Mon</span>
+                                <canvas id="attendance-trend-chart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance History Card -->
+                    <div class="content-card full-width">
+                        <div class="card-header">
+                            <h3><i class="fas fa-history me-2"></i>Attendance History</h3>
+                            <div class="header-actions">
+                                <button class="btn-outline" id="export-csv">
+                                    <i class="fas fa-download me-1"></i> Export CSV
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="attendance-table-container">
+                                <div class="table-responsive">
+                                    <table class="attendance-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Unit</th>
+                                                <th>Lecturer</th>
+                                                <th>Status</th>
+                                                <th>Time</th>
+                                                <th>Venue</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="attendance-table-body">
+                                            {% for attendance in attendances|slice:":20" %}
+                                            <tr>
+                                                <td>
+                                                    {% if attendance.scan_time %}
+                                                        {{ attendance.scan_time|date:"M d, Y" }}
+                                                    {% else %}
+                                                        {{ attendance.class_schedule.schedule_date|date:"M d, Y" }}
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <strong>{{ attendance.class_schedule.semester_unit.unit.code }}</strong>
+                                                    <br>
+                                                    <small>{{ attendance.class_schedule.semester_unit.unit.name }}</small>
+                                                </td>
+                                                <td>Dr. {{ attendance.class_schedule.lecturer.user.last_name }}</td>
+                                                <td>
+                                                    <span class="status-indicator {{ attendance.status|lower }}">
+                                                        {{ attendance.status }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {% if attendance.scan_time %}
+                                                        {{ attendance.scan_time|time:"H:i" }}
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ attendance.class_schedule.venue }}</td>
+                                            </tr>
+                                            {% empty %}
+                                            <tr>
+                                                <td colspan="6" class="text-center py-4">
+                                                    <div class="empty-state small">
+                                                        <i class="fas fa-ban"></i>
+                                                        <p>No attendance records found</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% if attendances.count > 20 %}
+                                <div class="table-footer">
+                                    <button class="btn-outline" id="load-more-attendance">
+                                        <i class="fas fa-plus me-1"></i> Load More
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Profile Tab -->
+            <section class="tab-content" id="profile-tab">
+                <div class="content-grid">
+                    <!-- Profile Card -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-user me-2"></i>Personal Information</h3>
+                            <a href="{% url 'profile_edit' %}" class="btn-outline">
+                                <i class="fas fa-edit me-1"></i> Edit Profile
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="profile-info">
+                                <div class="profile-avatar-large">
+                                    {% if user.profile_picture %}
+                                        <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
+                                    {% else %}
+                                        <img src="https://ui-avatars.com/api/?name={{ user.first_name|urlencode }}+{{ user.last_name|urlencode }}&background=4f46e5&color=fff&size=200" alt="{{ user.get_full_name }}">
+                                    {% endif %}
+                                </div>
+                                <div class="profile-details">
+                                    <div class="detail-group">
+                                        <label>Full Name</label>
+                                        <p>{{ user.first_name }} {{ user.last_name }}</p>
                                     </div>
-                                    <div class="chart-bar-trend" style="height: 95%">
-                                        <span class="bar-label">Tue</span>
+                                    <div class="detail-group">
+                                        <label>Registration Number</label>
+                                        <p>{{ student.registration_number }}</p>
                                     </div>
-                                    <div class="chart-bar-trend" style="height: 65%">
-                                        <span class="bar-label">Wed</span>
+                                    <div class="detail-group">
+                                        <label>Email Address</label>
+                                        <p>{{ user.email }}</p>
                                     </div>
-                                    <div class="chart-bar-trend" style="height: 90%">
-                                        <span class="bar-label">Thu</span>
+                                    <div class="detail-group">
+                                        <label>Department</label>
+                                        <p>{{ student.department.name }}</p>
                                     </div>
-                                    <div class="chart-bar-trend" style="height: {{ attendance_percentage }}%">
-                                        <span class="bar-label">Fri</span>
+                                    <div class="detail-group">
+                                        <label>Course</label>
+                                        <p>{{ student.course.name }}</p>
+                                    </div>
+                                    <div class="detail-group">
+                                        <label>Current Semester</label>
+                                        <p>{{ student.current_semester.name }}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Recent Activity -->
-                    <div class="content-card full-width p-3">
+                    <!-- Academic Stats Card -->
+                    <div class="content-card">
                         <div class="card-header">
-                            <h3>Attendance History</h3>
+                            <h3><i class="fas fa-graduation-cap me-2"></i>Academic Statistics</h3>
                         </div>
                         <div class="card-body">
-                            <div class="attendance-table">
-                                <div class="table-header">
-                                    <div class="table-col">Date</div>
-                                    <div class="table-col">Unit</div>
-                                    <div class="table-col">Lecturer</div>
-                                    <div class="table-col">Status</div>
-                                    <div class="table-col">Time</div>
+                            <div class="academic-stats">
+                                <div class="academic-stat">
+                                    <div class="stat-icon primary">
+                                        <i class="fas fa-book"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">{{ enrolled_units }}</div>
+                                        <div class="stat-label">Enrolled Units</div>
+                                    </div>
                                 </div>
-                                <div class="table-body">
-                                   {% for attendance in attendances|slice:":10" %}
-    <div class="table-row">
-        <!-- Date (from scan_time) -->
-        <div class="table-col">
-            {% if attendance.scan_time %}
-                {{ attendance.scan_time|date:"M d, Y" }}
-            {% else %}
-                -
-            {% endif %}
-        </div>
-
-        <!-- Unit Code -->
-        <div class="table-col">
-            <strong>{{ attendance.class_schedule.semester_unit.unit.code }}</strong>
-        </div>
-
-        <!-- Lecturer -->
-        <div class="table-col">
-            Dr. {{ attendance.class_schedule.lecturer.user.last_name }}
-        </div>
-
-        <!-- Status -->
-        <div class="table-col">
-            <span class="status-indicator {{ attendance.status|lower }}">
-                {{ attendance.status }}
-            </span>
-        </div>
-
-        <!-- Time (from scan_time) -->
-        <div class="table-col">
-            {% if attendance.scan_time %}
-                {{ attendance.scan_time|time:"H:i" }}
-            {% else %}
-                -
-            {% endif %}
-        </div>
-    </div>
-{% empty %}
-    <div class="table-row empty">
-        <div class="table-col" colspan="5">No attendance records found</div>
-    </div>
-{% endfor %}
+                                <div class="academic-stat">
+                                    <div class="stat-icon success">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">{{ attendance_percentage }}%</div>
+                                        <div class="stat-label">Attendance Rate</div>
+                                    </div>
+                                </div>
+                                <div class="academic-stat">
+                                    <div class="stat-icon info">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-value">{{ present_classes }}/{{ total_classes }}</div>
+                                        <div class="stat-label">Classes Attended</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
         </div>
     </main>
+
+    <!-- System Notifications Container -->
+    <div id="notifications-container" class="notifications-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Processing your request...</p>
+    </div>
+
+    <!-- Location Permission Modal -->
+    <div class="modal fade" id="locationPermissionModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-map-marker-alt me-2"></i>Location Access Required
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Attendify needs access to your location to verify you're in the correct classroom for attendance marking.</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Why we need location:</strong> Prevents remote attendance fraud and ensures you're physically present in class.
+                    </div>
+                    <p>Your location data is only used for attendance validation and is not stored permanently.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="enable-location-btn">
+                        <i class="fas fa-check me-2"></i>Enable Location
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera Permission Modal -->
+    <div class="modal fade" id="cameraPermissionModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-camera me-2"></i>Camera Access Required
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Attendify needs access to your camera to scan QR codes for attendance marking.</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>How it works:</strong> Point your camera at the QR code displayed by your lecturer. The system will automatically detect and scan it.
+                    </div>
+                    <p>Camera access is only used for QR scanning and is not recorded or stored.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="enable-camera-btn">
+                        <i class="fas fa-check me-2"></i>Enable Camera
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="portal-footer">
@@ -662,7 +957,7 @@
             </div>
             
             <div class="footer-bottom">
-                <p>&copy; 2025 Attendify Systems | Student Portal v2.0.1</p>
+                <p>&copy; 2025 Attendify Systems | Student Portal v2.1.0</p>
                 <div class="tech-info">
                     <span>Secure Connection • Real-time Data • Encrypted QR</span>
                 </div>
@@ -670,20 +965,19 @@
         </div>
     </footer>
 
+    <!-- Floating Background Elements -->
+    <div class="background-elements">
+        <div class="floating-circle"></div>
+        <div class="floating-circle"></div>
+        <div class="floating-circle"></div>
+        <div class="floating-circle"></div>
+        <div class="floating-circle"></div>
+        <div class="floating-circle"></div>
+    </div>
 
-<!-- Floating Background Elements -->
-<div class="background-elements">
-    <div class="floating-circle"></div>
-    <div class="floating-circle"></div>
-    <div class="floating-circle"></div>
-    <div class="floating-circle"></div>
-    <div class="floating-circle"></div>
-    <div class="floating-circle"></div>
-</div>
-
-
-    <!-- QR Scanner Library -->
-    <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
+    <!-- JavaScript Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>    
     <script src="{% static 'js/student.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>    
     
