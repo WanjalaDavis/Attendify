@@ -113,14 +113,7 @@
                     <i class="fas fa-chart-line"></i>
                 </div>
                 <span class="nav-label">Analytics</span>
-            </button>
-
-            <button class="nav-btn" data-tab="profile" title="My Profile">
-                <div class="nav-icon">
-                    <i class="fas fa-user"></i>
-                </div>
-                <span class="nav-label">Profile</span>
-            </button>
+            </button>            
         </div>
     </nav>
 
@@ -153,7 +146,7 @@
                 <div class="content-grid">
                     <!-- Today's Classes Card -->
                     <div class="content-card full-width">
-                        <div class="card-header">
+                        <div class="card-header p-3">
                             <h3><i class="fas fa-calendar-day me-2"></i>Today's Classes</h3>
                             <span class="card-badge">{{ todays_classes.count }} scheduled</span>
                         </div>
@@ -161,18 +154,20 @@
                             {% if todays_classes %}
                                 <div class="classes-list" id="todays-classes-list">
                                     {% for class in todays_classes %}
-                                    <div class="class-card {% if class.is_ongoing %}ongoing{% else %}upcoming{% endif %}" 
+                                    <div class="class-card {% if class.display_status == 'ongoing' %}ongoing{% elif class.display_status == 'upcoming' %}upcoming{% else %}ended{% endif %}" 
                                          data-class-id="{{ class.id }}"
+                                         data-status="{{ class.display_status }}"
                                          data-start-time="{{ class.start_time|time:'H:i:s' }}"
                                          data-end-time="{{ class.end_time|time:'H:i:s' }}"
                                          data-schedule-date="{{ class.schedule_date|date:'Y-m-d' }}"
                                          data-unit-code="{{ class.semester_unit.unit.code }}"
                                          data-unit-name="{{ class.semester_unit.unit.name }}"
                                          data-venue="{{ class.venue }}"
-                                         data-lecturer="Dr. {{ class.lecturer.user.last_name }}">
+                                         data-lecturer="Dr. {{ class.lecturer.user.last_name }}"
+                                         data-attendance-status="{{ class.attendance_status }}">
                                         <div class="class-status-indicator"></div>
                                         <div class="class-icon">
-                                            <i class="fas fa-{% if class.is_ongoing %}play-circle{% else %}clock{% endif %}"></i>
+                                            <i class="fas fa-{% if class.display_status == 'ongoing' %}play-circle{% elif class.display_status == 'upcoming' %}clock{% else %}check-circle{% endif %}"></i>
                                         </div>
                                         <div class="class-details">
                                             <h4>{{ class.semester_unit.unit.name }}</h4>
@@ -183,9 +178,9 @@
                                             </div>
                                         </div>
                                         <div class="class-actions">
-                                            {% if class.is_ongoing %}
-                                                {% if class.id in attended_class_ids %}
-                                                    <span class="status-badge success">Attendance Marked</span>
+                                            {% if class.display_status == 'ongoing' %}
+                                                {% if class.attendance_marked %}
+                                                    <span class="status-badge success">{{ class.attendance_status }}</span>
                                                     <button class="btn-success" disabled>
                                                         <i class="fas fa-check"></i> Already Marked
                                                     </button>
@@ -195,9 +190,23 @@
                                                         <i class="fas fa-qrcode"></i> Scan QR
                                                     </button>
                                                 {% endif %}
-                                            {% else %}
+                                            
+                                            {% elif class.display_status == 'upcoming' %}
                                                 <span class="status-badge upcoming">Upcoming</span>
                                                 <div class="countdown-timer" id="countdown-{{ class.id }}"></div>
+                                            
+                                            {% else %} <!-- Ended class -->
+                                                {% if class.attendance_marked %}
+                                                    <span class="status-badge success">{{ class.attendance_status }}</span>
+                                                    <button class="btn-success" disabled>
+                                                        <i class="fas fa-check"></i> Attended
+                                                    </button>
+                                                {% else %}
+                                                    <span class="status-badge danger">Absent</span>
+                                                    <button class="btn-danger" disabled>
+                                                        <i class="fas fa-times"></i> Missed
+                                                    </button>
+                                                {% endif %}
                                             {% endif %}
                                         </div>
                                     </div>
@@ -215,7 +224,7 @@
                     
                     <!-- Quick Stats Card -->
                     <div class="content-card">
-                        <div class="card-header">
+                        <div class="card-header p-3">
                             <h3><i class="fas fa-chart-bar me-2"></i>Quick Stats</h3>
                         </div>
                         <div class="card-body">
@@ -253,7 +262,7 @@
                     
                     <!-- Upcoming Classes Card -->
                     <div class="content-card">
-                        <div class="card-header">
+                        <div class="card-header p-3">
                             <h3><i class="fas fa-calendar-week me-2"></i>Upcoming Classes</h3>
                             <span class="card-badge">{{ upcoming_classes.count }} classes</span>
                         </div>
@@ -293,11 +302,11 @@
                 <div class="content-grid">
                     <!-- QR Scanner Card -->
                     <div class="content-card full-width">
-                        <div class="card-header">
+                        <div class="card-header p-3">
                             <h3><i class="fas fa-qrcode me-2"></i>QR Attendance System</h3>
                             <span class="card-badge">Live</span>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-4">
                             <div class="scanner-layout">
                                 <div class="scanner-content">
                                     <h4>Real-time QR Scanning</h4>
@@ -314,6 +323,7 @@
                                                  data-unit-name="{{ class.semester_unit.unit.name }}"
                                                  data-start-time="{{ class.start_time|time:'H:i:s' }}"
                                                  data-end-time="{{ class.end_time|time:'H:i:s' }}"
+                                                 data-schedule-date="{{ class.schedule_date|date:'Y-m-d' }}"
                                                  data-venue="{{ class.venue }}"
                                                  data-lecturer="Dr. {{ class.lecturer.user.last_name }}">
                                                 <div class="class-info">
@@ -504,7 +514,7 @@
 
                     <!-- Recent Attendance Card -->
                     <div class="content-card">
-                        <div class="card-header">
+                        <div class="card-header p-3">
                             <h3><i class="fas fa-history me-2"></i>Recent Scans</h3>
                             <button class="btn-icon" id="refresh-recent-attendance">
                                 <i class="fas fa-sync-alt"></i>
@@ -551,7 +561,7 @@
                 <div class="content-grid">
                     <!-- My Units Card -->
                     <div class="content-card full-width">
-                        <div class="card-header">
+                        <div class="card-header p-3">
                             <h3><i class="fas fa-book me-2"></i>Enrolled Units</h3>
                             <span class="card-badge">{{ unit_enrollments.count }} active</span>
                         </div>
@@ -611,7 +621,7 @@
                     </div>
 
                     <!-- Unit Details Card -->
-                    <div class="content-card full-width" id="unit-details-card" style="display: none;">
+                    <div class="content-card full-width p-5" id="unit-details-card" style="display: none;">
                         <div class="card-header">
                             <h3><i class="fas fa-analytics me-2"></i>Unit Analytics</h3>
                             <button class="btn-icon" onclick="hideUnitDetails()">
@@ -630,7 +640,7 @@
                 <div class="content-grid">
                     <!-- Attendance Overview Card -->
                     <div class="content-card">
-                        <div class="card-header">
+                        <div class="card-header p-3">
                             <h3><i class="fas fa-chart-pie me-2"></i>Attendance Overview</h3>
                         </div>
                         <div class="card-body">
@@ -667,7 +677,7 @@
 
                     <!-- Performance Trends Card -->
                     <div class="content-card">
-                        <div class="card-header">
+                        <div class="card-header p-3">
                             <h3><i class="fas fa-chart-line me-2"></i>Weekly Trend</h3>
                         </div>
                         <div class="card-body">
@@ -679,7 +689,7 @@
 
                     <!-- Attendance History Card -->
                     <div class="content-card full-width">
-                        <div class="card-header">
+                        <div class="card-header p-3">
                             <h3><i class="fas fa-history me-2"></i>Attendance History</h3>
                             <div class="header-actions">
                                 <button class="btn-outline" id="export-csv">
@@ -756,60 +766,11 @@
                     </div>
                 </div>
             </section>
-
-            <!-- Profile Tab -->
-            <section class="tab-content" id="profile-tab">
-                <div class="content-grid">
-                    <!-- Profile Card -->
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-user me-2"></i>Personal Information</h3>
-                            <a href="{% url 'profile_edit' %}" class="btn-outline">
-                                <i class="fas fa-edit me-1"></i> Edit Profile
-                            </a>
-                        </div>
-                        <div class="card-body">
-                            <div class="profile-info">
-                                <div class="profile-avatar-large">
-                                    {% if user.profile_picture %}
-                                        <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
-                                    {% else %}
-                                        <img src="https://ui-avatars.com/api/?name={{ user.first_name|urlencode }}+{{ user.last_name|urlencode }}&background=4f46e5&color=fff&size=200" alt="{{ user.get_full_name }}">
-                                    {% endif %}
-                                </div>
-                                <div class="profile-details">
-                                    <div class="detail-group">
-                                        <label>Full Name</label>
-                                        <p>{{ user.first_name }} {{ user.last_name }}</p>
-                                    </div>
-                                    <div class="detail-group">
-                                        <label>Registration Number</label>
-                                        <p>{{ student.registration_number }}</p>
-                                    </div>
-                                    <div class="detail-group">
-                                        <label>Email Address</label>
-                                        <p>{{ user.email }}</p>
-                                    </div>
-                                    <div class="detail-group">
-                                        <label>Department</label>
-                                        <p>{{ student.department.name }}</p>
-                                    </div>
-                                    <div class="detail-group">
-                                        <label>Course</label>
-                                        <p>{{ student.course.name }}</p>
-                                    </div>
-                                    <div class="detail-group">
-                                        <label>Current Semester</label>
-                                        <p>{{ student.current_semester.name }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            
 
                     <!-- Academic Stats Card -->
                     <div class="content-card">
-                        <div class="card-header">
+                        <div class="card-header p-3">
                             <h3><i class="fas fa-graduation-cap me-2"></i>Academic Statistics</h3>
                         </div>
                         <div class="card-body">
@@ -935,8 +896,7 @@
                     <div class="link-group">
                         <h4>Portal</h4>
                         <a href="{% url 'student_dashboard' %}">Dashboard</a>
-                        <a href="{% url 'student_portal' %}">Portal</a>
-                        <a href="{% url 'profile' %}">Profile</a>
+                        <a href="{% url 'student_portal' %}">Portal</a>                        
                     </div>
                     
                     <div class="link-group">
@@ -975,10 +935,15 @@
         <div class="floating-circle"></div>
     </div>
 
-    <!-- JavaScript Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>    
-    <script src="{% static 'js/student.js' %}"></script>
+    
+ 
+<script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.3/qr-scanner.umd.min.js"></script>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="{% static 'js/student.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>    
     
 </body>

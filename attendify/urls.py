@@ -5,14 +5,12 @@ from django.conf.urls.static import static
 from . import views
 
 urlpatterns = [
-    # -------------------------------------------------------------------
-    # Authentication & Core Pages
-    # -------------------------------------------------------------------
-    path("", views.login_view, name="login"),  # Root URL as login/landing page
+  
+    path("", views.login_view, name="login"), 
     path("logout/", views.logout_view, name="logout"),
     path("change-password/", views.change_password, name="change_password"),
     
-    # Password reset flows (using Django's built-in views with custom templates)
+    
     path("password-reset/", 
          auth_views.PasswordResetView.as_view(
              template_name='auth/password_reset.html',
@@ -36,28 +34,17 @@ urlpatterns = [
          ), 
          name="password_reset_complete"),
 
-    # -------------------------------------------------------------------
-    # Profile Management
-    # -------------------------------------------------------------------
     path("profile/", views.profile_view, name="profile"),
     path("profile/edit/", views.profile_edit, name="profile_edit"),
 
-    # -------------------------------------------------------------------
-    # Dashboard & Redirect System
-    # -------------------------------------------------------------------
     path("dashboard/", views.dashboard_redirect, name="dashboard_redirect"),
 
-    # -------------------------------------------------------------------
-    # Student Routes
     # -------------------------------------------------------------------
     path("student/dashboard/", views.student_dashboard, name="student_dashboard"),
     path("student/portal/", views.student_portal, name="student_portal"),
     path("student/attendance-history/", views.student_attendance_history, name="student_attendance_history"),
     path("student/unit-attendance/<uuid:unit_id>/", views.student_unit_attendance, name="student_unit_attendance"),
 
-    # -------------------------------------------------------------------
-    # Lecturer Routes
-    # -------------------------------------------------------------------
     path("lecturer/dashboard/", views.lecturer_dashboard, name="lecturer_dashboard"),
     path("lecturer/portal/", views.lecturer_portal, name="lecturer_portal"),
     path("lecturer/attendance/", views.lecturer_attendance, name="lecturer_attendance"),
@@ -66,9 +53,6 @@ urlpatterns = [
     path("lecturer/schedule-class/", views.schedule_class, name="schedule_class"),
     path("lecturer/generate-report/", views.generate_report, name="generate_report"),
 
-    # -------------------------------------------------------------------
-    # Admin Routes (redirects to Django admin)
-    # -------------------------------------------------------------------
     path("admin/dashboard/", views.admin_dashboard, name="admin_dashboard"),
     path("admin/students/", views.manage_students, name="manage_students"),
     path("admin/students/create/", views.create_student, name="create_student"),
@@ -86,9 +70,7 @@ urlpatterns = [
     path("admin/assignments/", views.assign_unit_lecturer, name="assign_unit_lecturer"),
     path("admin/system-logs/", views.system_logs, name="system_logs"),
 
-    # -------------------------------------------------------------------
-    # API Routes - COMPLETE SET
-    # -------------------------------------------------------------------
+   
     path("api/system-stats/", views.api_system_stats, name="api_system_stats"),
     path("api/scan-qr/", views.scan_qr_code, name="scan_qr_code"),
     path("api/student/<uuid:student_id>/attendance/", views.api_student_attendance, name="api_student_attendance"),
@@ -98,6 +80,16 @@ urlpatterns = [
     
     path("api/class-list/", views.api_class_list, name="api_class_list"),
     path("api/today-classes/", views.api_today_classes, name="api_today_classes"),
+
+    # Student API endpoints
+    path('api/recent-attendance/', views.recent_attendance_api, name='recent_attendance_api'),
+    path('api/attendance-stats/', views.attendance_stats_api, name='attendance_stats_api'),
+    path('api/unit-analytics/<uuid:unit_id>/', views.unit_analytics_api, name='unit_analytics_api'),
+    path('api/export-attendance-csv/', views.export_attendance_csv, name='export_attendance_csv'),
+    path('api/attendance-history/', views.attendance_history_api, name='attendance_history_api'),
+    
+    # QR Scanning endpoint
+    path('scan-qr-code/', views.scan_qr_code_endpoint, name='scan_qr_code'),
     
     # Lecturer APIs - ALL MISSING ENDPOINTS ADDED
     path("api/lecturer/recent-attendance/", views.api_lecturer_recent_attendance, name="api_lecturer_recent_attendance"),
@@ -110,16 +102,9 @@ urlpatterns = [
     path("api/lecturer/mark-manual-attendance/", views.api_mark_manual_attendance, name="api_mark_manual_attendance"),
 ]
 
-
-# -------------------------------------------------------------------
-# Error Handlers
-# -------------------------------------------------------------------
 handler403 = views.handler403
 handler404 = views.handler404
 handler500 = views.handler500
 
-# -------------------------------------------------------------------
-# Development Static & Media Files
-# -------------------------------------------------------------------
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

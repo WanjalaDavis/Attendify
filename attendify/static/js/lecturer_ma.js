@@ -7,12 +7,13 @@ class LecturerPortal {
         this.currentLocation = null;
         this.locationDetector = null;
         this.lecturerData = null;
-        this.classTimers = new Map(); // Store timers for each class
+        this.classTimers = new Map();
         
         this.init();
     }
 
     init() {
+        this.verifyLibraries();
         this.bindEvents();
         this.initDynamicGreeting();
         this.initClassTimeTracking();
@@ -21,6 +22,97 @@ class LecturerPortal {
         this.startAutoRefresh();
         
         console.log('Lecturer Portal initialized successfully');
+    }
+
+    // ==================== LIBRARY VERIFICATION ====================
+    verifyLibraries() {
+        console.log('Verifying required libraries...');
+        
+        const libraries = {
+            'QRCode': typeof QRCode,
+            'bootstrap': typeof bootstrap,
+            'Chart': typeof Chart
+        };
+        
+        console.log('Library status:', libraries);
+        
+        // Check QRCode library specifically
+        if (typeof QRCode === 'undefined') {
+            console.error('QRCode library not loaded - using fallback method');
+            this.showPersistentLibraryWarning();
+            this.initializeFallbackQRGenerator();
+        } else {
+            console.log('QRCode library loaded successfully');
+            this.removeLibraryWarnings();
+        }
+    }
+
+    initializeFallbackQRGenerator() {
+        // Create a simple fallback QR generator
+        window.fallbackQRGenerator = {
+            generate: function(text, canvas, size = 200) {
+                try {
+                    // Simple fallback: create a placeholder with text
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = size;
+                    canvas.height = size;
+                    
+                    // Clear canvas
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, size, size);
+                    
+                    // Draw border
+                    ctx.strokeStyle = '#4f46e5';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(10, 10, size - 20, size - 20);
+                    
+                    // Draw text
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('QR CODE', size / 2, size / 2 - 10);
+                    
+                    ctx.font = '12px Arial';
+                    ctx.fillText('Library Not Loaded', size / 2, size / 2 + 10);
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Fallback QR generation failed:', error);
+                    return false;
+                }
+            }
+        };
+        
+        console.log('Fallback QR generator initialized');
+    }
+
+    showPersistentLibraryWarning() {
+        this.removeLibraryWarnings();
+        
+        const warning = document.createElement('div');
+        warning.id = 'qr-library-warning';
+        warning.className = 'alert alert-warning alert-dismissible fade show m-3';
+        warning.style.cssText = 'position: fixed; top: 100px; right: 20px; z-index: 9999; max-width: 400px;';
+        warning.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                <div>
+                    <strong class="d-block">QR Code Warning</strong>
+                    <span class="d-block">Using limited QR functionality.</span>
+                    <small class="d-block mt-1">Check internet connection for full features.</small>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        document.body.appendChild(warning);
+    }
+
+    removeLibraryWarnings() {
+        const existingWarning = document.getElementById('qr-library-warning');
+        if (existingWarning) {
+            existingWarning.remove();
+        }
     }
 
     // ==================== CORE UTILITIES ====================
@@ -82,7 +174,6 @@ class LecturerPortal {
 
         container.appendChild(notification);
 
-        // Auto-remove after duration
         if (duration > 0) {
             setTimeout(() => {
                 if (notification.parentElement) {
@@ -117,7 +208,7 @@ class LecturerPortal {
             scheduleForm.addEventListener('submit', (e) => this.handleClassSchedule(e));
         }
         
-        // QR code generation - Event delegation for dynamically loaded classes
+        // QR code generation - Event delegation
         document.addEventListener('click', (e) => {
             const qrBtn = e.target.closest('.generate-qr-btn');
             if (qrBtn) {
@@ -201,28 +292,22 @@ class LecturerPortal {
     switchTab(tabName) {
         console.log('Switching to tab:', tabName);
         
-        // Update navigation
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tab === tabName);
         });
 
-        // Update content
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.toggle('active', content.id === `${tabName}-tab`);
         });
 
         this.currentTab = tabName;
 
-        // Tab-specific initializations
         switch(tabName) {
             case 'classes':
                 this.initClassTimeTracking();
                 break;
             case 'reports':
                 this.initReportForm();
-                break;
-            case 'units':
-                // Units are server-rendered
                 break;
         }
         
@@ -231,23 +316,19 @@ class LecturerPortal {
 
     // ==================== CLASS STATUS AND TIME TRACKING ====================
     initClassTimeTracking() {
-        // Clear existing timers
         this.classTimers.forEach((timer, classId) => {
             clearInterval(timer);
         });
         this.classTimers.clear();
 
-        // Start tracking for all classes
         this.trackAllClassTimes();
         
-        // Update every second for real-time tracking
         setInterval(() => {
             this.trackAllClassTimes();
         }, 1000);
     }
 
     trackAllClassTimes() {
-        // Track today's classes with proper status detection
         document.querySelectorAll('.class-card').forEach(card => {
             const classId = card.dataset.classId;
             const scheduleDate = card.dataset.scheduleDate;
@@ -259,7 +340,6 @@ class LecturerPortal {
             }
         });
 
-        // Track upcoming classes in compact list
         document.querySelectorAll('.compact-item.class-card').forEach(card => {
             const classId = card.dataset.classId;
             const scheduleDate = card.dataset.scheduleDate;
@@ -296,8 +376,6 @@ class LecturerPortal {
         const classEnd = endTime ? new Date(`${scheduleDate}T${endTime}`) : null;
 
         const classStatus = this.getClassStatus(scheduleDate, startTime, endTime);
-        const canGenerateQR = this.canGenerateQR(classStatus);
-
         const classCard = document.querySelector(`[data-class-id="${classId}"]`);
         if (!classCard) return;
 
@@ -306,7 +384,6 @@ class LecturerPortal {
         if (statusElement) {
             statusElement.className = `class-status-indicator status-${classStatus.toLowerCase()}`;
             
-            // Find the status text element next to the indicator
             const statusText = statusElement.nextElementSibling;
             if (statusText && statusText.style) {
                 statusText.textContent = classStatus;
@@ -351,7 +428,7 @@ class LecturerPortal {
         // Update QR button state
         this.updateQRButtonState(classId, classStatus);
 
-        // Update card border color based on status
+        // Update card border color
         classCard.style.borderLeft = `4px solid ${
             classStatus === 'ONGOING' ? '#10b981' :
             classStatus === 'UPCOMING' ? '#f59e0b' : '#6b7280'
@@ -362,10 +439,8 @@ class LecturerPortal {
         const qrButton = document.querySelector(`.generate-qr-btn[data-class-id="${classId}"]`);
         if (!qrButton) return;
 
-        // Update data attribute
         qrButton.dataset.status = status;
 
-        // Update button content and state
         switch(status) {
             case 'ONGOING':
                 qrButton.innerHTML = '<i class="fas fa-qrcode"></i> Generate QR';
@@ -394,10 +469,343 @@ class LecturerPortal {
         }
     }
 
+    // ==================== QR CODE MANAGEMENT ====================
+    async generateQRCode(classId) {
+        console.log('Starting QR generation for class:', classId);
+        
+        if (!classId) {
+            this.showNotification('No class selected', 'error');
+            return;
+        }
+
+        // Check if class is ongoing
+        const classCard = document.querySelector(`[data-class-id="${classId}"]`);
+        if (!classCard) {
+            this.showNotification('Class not found', 'error');
+            return;
+        }
+
+        const scheduleDate = classCard.dataset.scheduleDate;
+        const startTime = classCard.dataset.startTime;
+        const endTime = classCard.dataset.endTime;
+
+        const classStatus = this.getClassStatus(scheduleDate, startTime, endTime);
+        if (!this.canGenerateQR(classStatus)) {
+            this.showNotification(`Cannot generate QR code: Class is ${classStatus.toLowerCase()}`, 'warning');
+            return;
+        }
+
+        this.showLoading(true, 'Generating QR code...');
+
+        try {
+            const response = await fetch(`/lecturer/generate-qr/${classId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': this.csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('QR generation response:', data);
+            
+            if (data.success) {
+                this.activeQRCode = {
+                    classId: classId,
+                    token: data.token,
+                    expiresAt: new Date(data.expires_at),
+                    qrData: JSON.stringify({
+                        token: data.token,
+                        class_id: classId,
+                        expires_at: data.expires_at
+                    })
+                };
+                
+                const classInfo = this.getClassInfo(classId);
+                console.log('Class info for QR:', classInfo);
+                this.showQRModal(this.activeQRCode.qrData, classInfo);
+                this.showNotification('QR code generated successfully!', 'success');
+                this.startQRExpiryCountdown(new Date(data.expires_at));
+                
+            } else {
+                throw new Error(data.message || 'Failed to generate QR code');
+            }
+
+        } catch (error) {
+            console.error('QR generation error:', error);
+            this.showNotification('Error generating QR code: ' + error.message, 'error');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    showQRModal(qrData, classInfo) {
+        const modalElement = document.getElementById('qrCodeModal');
+        if (!modalElement) {
+            console.error('QR modal element not found');
+            return;
+        }
+
+        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        const modalQrCode = document.getElementById('modal-qr-code');
+        const qrClassInfo = document.getElementById('qr-class-info');
+        const qrExpiryInfo = document.getElementById('qr-expiry-info');
+        const downloadBtn = document.getElementById('download-modal-qr');
+        
+        if (!modalQrCode || !qrClassInfo) {
+            console.error('QR modal content elements not found');
+            return;
+        }
+
+        // Set class info - FIXED: Use proper class info
+        qrClassInfo.textContent = `${classInfo.unitCode} - ${classInfo.unitName}`;
+        if (qrExpiryInfo) {
+            qrExpiryInfo.textContent = `Venue: ${classInfo.venue} | Time: ${classInfo.startTime} - ${classInfo.endTime}`;
+        }
+
+        // Clear and prepare QR code container
+        modalQrCode.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Generating QR code...</p></div>';
+        
+        // Enable download button
+        if (downloadBtn) {
+            downloadBtn.disabled = false;
+        }
+        
+        // Show modal first
+        modal.show();
+
+        // Generate QR code after a short delay to ensure modal is visible
+        setTimeout(() => {
+            this.generateQRImage(qrData, modalQrCode);
+        }, 100);
+    }
+
+    generateQRImage(qrData, container) {
+        try {
+            // Clear container
+            container.innerHTML = '';
+            
+            // Create canvas element
+            const canvas = document.createElement('canvas');
+            canvas.width = 250;
+            canvas.height = 250;
+            canvas.style.border = '2px solid #dee2e6';
+            canvas.style.borderRadius = '8px';
+            canvas.style.display = 'block';
+            canvas.style.margin = '0 auto';
+            
+            container.appendChild(canvas);
+
+            // Check if we have QRCode library or use fallback
+            if (typeof QRCode !== 'undefined') {
+                // Use real QR code library
+                QRCode.toCanvas(canvas, qrData, {
+                    width: 250,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                }, (error) => {
+                    if (error) {
+                        console.error('QR code generation failed:', error);
+                        this.useFallbackQR(canvas, qrData);
+                        return;
+                    }
+                    
+                    console.log('QR code generated successfully with library');
+                });
+            } else {
+                // Use fallback method
+                this.useFallbackQR(canvas, qrData);
+            }
+            
+        } catch (error) {
+            console.error('QR code rendering error:', error);
+            container.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    QR display limited. Functionality preserved.
+                </div>
+            `;
+        }
+    }
+
+    useFallbackQR(canvas, qrData) {
+        console.log('Using fallback QR generator');
+        
+        if (window.fallbackQRGenerator && window.fallbackQRGenerator.generate) {
+            window.fallbackQRGenerator.generate(qrData, canvas, 250);
+        } else {
+            // Basic fallback
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 250, 250);
+            
+            ctx.strokeStyle = '#4f46e5';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(10, 10, 230, 230);
+            
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('ATTENDANCE QR', 125, 120);
+            
+            ctx.font = '12px Arial';
+            ctx.fillText('Scan with Attendify App', 125, 140);
+        }
+    }
+
+    downloadQRCode() {
+        console.log('Download QR code clicked');
+        
+        if (!this.activeQRCode) {
+            this.showNotification('No active QR code to download', 'warning');
+            return;
+        }
+
+        try {
+            const canvas = document.querySelector('#modal-qr-code canvas');
+            
+            if (!canvas) {
+                this.showNotification('QR code not available for download. Please generate it again.', 'error');
+                return;
+            }
+
+            const classInfo = this.getClassInfo(this.activeQRCode.classId);
+            const filename = `qr-${classInfo.unitCode}-${new Date().toISOString().slice(0, 10)}.png`;
+
+            // Create download link
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            this.showNotification('QR code downloaded successfully!', 'success');
+            
+        } catch (error) {
+            console.error('Download error:', error);
+            this.showNotification('Failed to download QR code: ' + error.message, 'error');
+        }
+    }
+
+    startQRExpiryCountdown(expiresAt) {
+        const expiryTime = expiresAt.getTime();
+        
+        const countdown = setInterval(() => {
+            const now = new Date().getTime();
+            const distance = expiryTime - now;
+            
+            if (distance <= 0) {
+                clearInterval(countdown);
+                this.showNotification('QR code has expired', 'warning');
+                
+                const modalExpiryInfo = document.getElementById('qr-expiry-info');
+                if (modalExpiryInfo) {
+                    const baseText = modalExpiryInfo.textContent.split('|')[0];
+                    modalExpiryInfo.textContent = `${baseText} | EXPIRED`;
+                    modalExpiryInfo.classList.add('text-danger');
+                }
+                return;
+            }
+            
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            
+            const modalExpiryInfo = document.getElementById('qr-expiry-info');
+            if (modalExpiryInfo) {
+                const baseText = modalExpiryInfo.textContent.split('|')[0];
+                modalExpiryInfo.textContent = `${baseText} | Expires in: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                modalExpiryInfo.classList.remove('text-danger');
+            }
+            
+        }, 1000);
+    }
+
+    getClassInfo(classId) {
+        const classElement = document.querySelector(`[data-class-id="${classId}"]`);
+        if (!classElement) {
+            console.warn('Class element not found for ID:', classId);
+            return this.getDefaultClassInfo();
+        }
+
+        try {
+            // Improved class info extraction
+            let unitName = 'Unknown Class';
+            let unitCode = 'Unknown';
+            let venue = 'Unknown Venue';
+            let startTime = '00:00';
+            let endTime = '00:00';
+            let scheduleDate = 'Unknown Date';
+
+            // Try to extract from h4 element
+            const unitNameElement = classElement.querySelector('h4');
+            if (unitNameElement) {
+                unitName = unitNameElement.textContent.trim();
+            }
+
+            // Try to extract from class-meta element
+            const classMetaElement = classElement.querySelector('.class-meta');
+            if (classMetaElement) {
+                const metaText = classMetaElement.textContent.trim();
+                const parts = metaText.split('|');
+                if (parts.length >= 1) unitCode = parts[0].trim();
+                if (parts.length >= 2) venue = parts[1].trim();
+            }
+
+            // Try to extract time from time element
+            const timeElement = classElement.querySelector('.time');
+            if (timeElement) {
+                const timeText = timeElement.textContent.trim();
+                const times = timeText.split(' - ');
+                if (times.length >= 1) startTime = times[0].trim();
+                if (times.length >= 2) endTime = times[1].trim();
+            }
+
+            // Get schedule date from data attribute
+            if (classElement.dataset.scheduleDate) {
+                scheduleDate = classElement.dataset.scheduleDate;
+            }
+
+            console.log('Extracted class info:', { unitCode, unitName, venue, startTime, endTime, scheduleDate });
+            
+            return {
+                unitCode,
+                unitName,
+                venue,
+                startTime,
+                endTime,
+                scheduleDate
+            };
+        } catch (error) {
+            console.error('Error extracting class info:', error);
+            return this.getDefaultClassInfo();
+        }
+    }
+
+    getDefaultClassInfo() {
+        return {
+            unitCode: 'Unknown',
+            unitName: 'Unknown Class',
+            venue: 'Unknown Venue',
+            startTime: '00:00',
+            endTime: '00:00',
+            scheduleDate: 'Unknown Date'
+        };
+    }
+
     // ==================== CLASS DELETION ====================
     showDeleteConfirmation(classId) {
         const classInfo = this.getClassInfo(classId);
-        const modal = new bootstrap.Modal(document.getElementById('deleteClassModal'));
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteClassModal'));
         const classInfoElement = document.getElementById('class-to-delete-info');
 
         if (classInfoElement) {
@@ -411,7 +819,6 @@ class LecturerPortal {
             `;
         }
 
-        // Store the class ID to be deleted
         document.getElementById('deleteClassModal').dataset.classToDelete = classId;
         modal.show();
     }
@@ -427,7 +834,6 @@ class LecturerPortal {
         this.showLoading(true, 'Deleting class...');
 
         try {
-            // Call backend API to delete class
             const response = await this.apiCall(`/api/lecturer/delete-class/${classId}/`, {
                 method: 'DELETE'
             });
@@ -436,7 +842,6 @@ class LecturerPortal {
                 this.showNotification('Class deleted successfully!', 'success');
                 this.removeClassFromUI(classId);
                 
-                // Close the modal
                 const modal = bootstrap.Modal.getInstance(document.getElementById('deleteClassModal'));
                 modal.hide();
                 
@@ -453,19 +858,16 @@ class LecturerPortal {
     }
 
     removeClassFromUI(classId) {
-        // Remove class card from today's classes
         const todayClass = document.querySelector(`[data-class-id="${classId}"]`);
         if (todayClass) {
             todayClass.remove();
         }
 
-        // Remove class from upcoming classes
         const upcomingClass = document.querySelector(`.compact-item[data-class-id="${classId}"]`);
         if (upcomingClass) {
             upcomingClass.remove();
         }
 
-        // Update class counts
         this.updateClassCounts();
     }
 
@@ -473,13 +875,11 @@ class LecturerPortal {
         const todayCount = document.querySelectorAll('#todays-classes-list .class-card').length;
         const upcomingCount = document.querySelectorAll('.compact-list .compact-item.class-card').length;
         
-        // Update badge counts
         const todayBadge = document.querySelector('.card-badge');
         if (todayBadge) {
             todayBadge.textContent = `${todayCount} scheduled`;
         }
 
-        // Update upcoming classes badge
         const upcomingBadge = document.querySelector('.content-card:nth-child(3) .card-badge');
         if (upcomingBadge) {
             upcomingBadge.textContent = `${upcomingCount} classes`;
@@ -498,7 +898,6 @@ class LecturerPortal {
         try {
             const formData = new FormData(event.target);
 
-            // Validate required fields
             const requiredFields = ['semester_unit', 'schedule_date', 'start_time', 'end_time', 'venue'];
             for (const field of requiredFields) {
                 if (!formData.get(field)) {
@@ -508,21 +907,18 @@ class LecturerPortal {
                 }
             }
 
-            // Validate time
             if (!this.validateClassTime(formData.get('start_time'), formData.get('end_time'))) {
                 this.showNotification('End time must be after start time', 'error');
                 this.showLoading(false);
                 return;
             }
 
-            // Validate date
             if (!this.validateClassDate(formData.get('schedule_date'))) {
                 this.showNotification('Class date cannot be in the past', 'error');
                 this.showLoading(false);
                 return;
             }
 
-            // Use the actual form submission to Django
             const response = await fetch(event.target.action, {
                 method: 'POST',
                 headers: {
@@ -535,7 +931,6 @@ class LecturerPortal {
                 this.showNotification('Class scheduled successfully!', 'success');
                 this.resetScheduleForm();
                 
-                // Refresh the page to show the new class
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
@@ -572,7 +967,6 @@ class LecturerPortal {
         const form = document.getElementById('schedule-class-form');
         if (form) {
             form.reset();
-            // Reset location radius to default
             const radiusInput = document.getElementById('location_radius');
             if (radiusInput) radiusInput.value = 100;
         }
@@ -625,244 +1019,8 @@ class LecturerPortal {
         }
     }
 
-    // ==================== QR CODE MANAGEMENT ====================
-  async generateQRCode(classId) {
-    if (!classId) {
-        this.showNotification('No class selected', 'error');
-        return;
-    }
-
-    console.log('Generating QR code for class:', classId);
-    
-    // Check if class is ongoing before generating QR
-    const classCard = document.querySelector(`[data-class-id="${classId}"]`);
-    if (!classCard) {
-        this.showNotification('Class not found', 'error');
-        return;
-    }
-
-    const scheduleDate = classCard.dataset.scheduleDate;
-    const startTime = classCard.dataset.startTime;
-    const endTime = classCard.dataset.endTime;
-
-    const classStatus = this.getClassStatus(scheduleDate, startTime, endTime);
-    if (!this.canGenerateQR(classStatus)) {
-        this.showNotification(`Cannot generate QR code: Class is ${classStatus.toLowerCase()}`, 'warning');
-        return;
-    }
-
-    this.showLoading(true, 'Generating QR code...');
-
-    try {
-        // Use the actual Django URL for QR generation
-        const response = await fetch(`/lecturer/generate-qr/${classId}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': this.csrfToken,
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-
-        // Check if response is JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            // If not JSON, get the text to see what's wrong
-            const text = await response.text();
-            console.error('Non-JSON response:', text.substring(0, 200));
-            throw new Error('Server returned an invalid response. Please check the console for details.');
-        }
-
-        const data = await response.json();
-        console.log('QR generation response:', data);
-        
-        if (data.success) {
-            this.activeQRCode = {
-                classId: classId,
-                token: data.token,
-                expiresAt: new Date(data.expires_at),
-                qrData: JSON.stringify({
-                    token: data.token,
-                    class_id: classId,
-                    expires_at: data.expires_at
-                })
-            };
-            
-            const classInfo = this.getClassInfo(classId);
-            this.showQRModal(this.activeQRCode.qrData, classInfo);
-            this.showNotification('QR code generated successfully!', 'success');
-            this.startQRExpiryCountdown(new Date(data.expires_at));
-            
-        } else {
-            throw new Error(data.message || 'Failed to generate QR code');
-        }
-
-    } catch (error) {
-        console.error('QR generation error:', error);
-        this.showNotification('Error generating QR code: ' + error.message, 'error');
-    } finally {
-        this.showLoading(false);
-    }
-}
-
-    getClassInfo(classId) {
-        const classElement = document.querySelector(`[data-class-id="${classId}"]`);
-        if (!classElement) {
-            console.warn('Class element not found for ID:', classId);
-            return {
-                unitCode: 'Unknown',
-                unitName: 'Unknown Class',
-                venue: 'Unknown Venue',
-                startTime: '00:00',
-                endTime: '00:00',
-                scheduleDate: 'Unknown Date'
-            };
-        }
-
-        // Extract class information from the DOM
-        const unitNameElement = classElement.querySelector('h4');
-        const unitName = unitNameElement ? unitNameElement.textContent.trim() : 'Unknown Class';
-        
-        const classMetaElement = classElement.querySelector('.class-meta');
-        const classMeta = classMetaElement ? classMetaElement.textContent.trim() : '';
-        
-        const unitCode = classMeta.split('|')[0]?.trim() || 'Unknown';
-        const venue = classMeta.split('|')[1]?.trim() || 'Unknown Venue';
-        
-        const timeElement = classElement.querySelector('.time');
-        const timeText = timeElement ? timeElement.textContent.trim() : '00:00 - 00:00';
-        const times = timeText.split(' - ');
-        
-        return {
-            unitCode,
-            unitName,
-            venue,
-            startTime: times[0]?.trim() || '00:00',
-            endTime: times[1]?.trim() || '00:00',
-            scheduleDate: classElement.dataset.scheduleDate || 'Unknown Date'
-        };
-    }
-
-    showQRModal(qrData, classInfo) {
-        const modalElement = document.getElementById('qrCodeModal');
-        if (!modalElement) {
-            console.error('QR modal element not found');
-            return;
-        }
-
-        const modal = new bootstrap.Modal(modalElement);
-        const modalQrCode = document.getElementById('modal-qr-code');
-        const qrClassInfo = document.getElementById('qr-class-info');
-        const qrExpiryInfo = document.getElementById('qr-expiry-info');
-        
-        if (!modalQrCode || !qrClassInfo) {
-            console.error('QR modal content elements not found');
-            return;
-        }
-
-        // Generate QR code for modal
-        modalQrCode.innerHTML = '';
-        
-        if (typeof QRCode !== 'undefined') {
-            try {
-                QRCode.toCanvas(qrData, { 
-                    width: 250, 
-                    height: 250,
-                    margin: 2,
-                    color: {
-                        dark: '#000000',
-                        light: '#FFFFFF'
-                    }
-                }, (err, canvas) => {
-                    if (err) {
-                        console.error('Modal QR code generation error:', err);
-                        modalQrCode.innerHTML = '<p class="text-muted">QR code generation failed</p>';
-                        return;
-                    }
-                    modalQrCode.appendChild(canvas);
-                });
-            } catch (error) {
-                console.error('Modal QR code rendering error:', error);
-                modalQrCode.innerHTML = '<p class="text-muted">QR code generation failed</p>';
-            }
-        } else {
-            modalQrCode.innerHTML = '<p class="text-muted">QR code library not loaded</p>';
-        }
-
-        qrClassInfo.textContent = `${classInfo.unitCode} - ${classInfo.unitName}`;
-        if (qrExpiryInfo) {
-            qrExpiryInfo.textContent = `Venue: ${classInfo.venue} | Time: ${classInfo.startTime} - ${classInfo.endTime}`;
-        }
-        
-        modal.show();
-        console.log('QR modal shown for class:', classInfo.unitCode);
-    }
-
-    downloadQRCode() {
-        if (!this.activeQRCode) {
-            this.showNotification('No active QR code to download', 'warning');
-            return;
-        }
-        
-        try {
-            const canvas = document.querySelector('#modal-qr-code canvas');
-            
-            if (!canvas) {
-                throw new Error('QR code canvas not found');
-            }
-
-            const classInfo = this.getClassInfo(this.activeQRCode.classId);
-            const filename = `qr-${classInfo.unitCode}-${new Date().toISOString().slice(0, 10)}.png`;
-
-            const link = document.createElement('a');
-            link.download = filename;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-
-            this.showNotification('QR code downloaded successfully!', 'success');
-        } catch (error) {
-            console.error('Download error:', error);
-            this.showNotification('Failed to download QR code', 'error');
-        }
-    }
-
-    startQRExpiryCountdown(expiresAt) {
-        const expiryTime = expiresAt.getTime();
-        
-        const countdown = setInterval(() => {
-            const now = new Date().getTime();
-            const distance = expiryTime - now;
-            
-            if (distance <= 0) {
-                clearInterval(countdown);
-                this.showNotification('QR code has expired', 'warning');
-                
-                // Update modal if still open
-                const modalExpiryInfo = document.getElementById('qr-expiry-info');
-                if (modalExpiryInfo) {
-                    const baseText = modalExpiryInfo.textContent.split('|')[0];
-                    modalExpiryInfo.textContent = `${baseText} | EXPIRED`;
-                    modalExpiryInfo.classList.add('text-danger');
-                }
-                return;
-            }
-            
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-            
-            // Update modal display if open
-            const modalExpiryInfo = document.getElementById('qr-expiry-info');
-            if (modalExpiryInfo) {
-                const baseText = modalExpiryInfo.textContent.split('|')[0];
-                modalExpiryInfo.textContent = `${baseText} | Expires in: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-                modalExpiryInfo.classList.remove('text-danger');
-            }
-            
-        }, 1000);
-    }
-
     // ==================== REPORT GENERATION ====================
     initReportForm() {
-        // Set default date range (last 30 days)
         const endDate = new Date();
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - 30);
@@ -881,7 +1039,6 @@ class LecturerPortal {
         try {
             const formData = new FormData(event.target);
             
-            // Use actual form submission for reports
             const response = await fetch(event.target.action, {
                 method: 'POST',
                 headers: {
@@ -892,7 +1049,6 @@ class LecturerPortal {
 
             if (response.ok) {
                 this.showNotification('Report generated successfully!', 'success');
-                // Refresh the page to show new report
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
@@ -916,7 +1072,6 @@ class LecturerPortal {
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
         
-        // Validate required fields
         if (!data.start_date || !data.end_date || !data.title) {
             this.showNotification('Please fill in all required fields', 'warning');
             return;
@@ -945,7 +1100,6 @@ class LecturerPortal {
     }
 
     showReportPreview(previewData) {
-        // Create a simple preview modal
         const previewHtml = `
             <div class="preview-content">
                 <h5>Report Preview</h5>
@@ -970,7 +1124,6 @@ class LecturerPortal {
             </div>
         `;
 
-        // You can implement a modal here to show the preview
         console.log('Report preview:', previewData);
         this.showNotification('Report preview generated successfully', 'info');
     }
@@ -1067,7 +1220,6 @@ class LecturerPortal {
         content.innerHTML = html;
         card.style.display = 'block';
 
-        // Initialize chart
         if (typeof Chart !== 'undefined' && unitData.chart_data) {
             this.renderAttendanceChart(unitData.chart_data);
         }
@@ -1140,7 +1292,6 @@ class LecturerPortal {
 
     // ==================== AUTO REFRESH ====================
     startAutoRefresh() {
-        // Refresh class times every minute
         setInterval(() => {
             if (this.currentTab === 'classes') {
                 this.trackAllClassTimes();
@@ -1161,7 +1312,6 @@ class LecturerPortal {
 
     // ==================== CLEANUP ====================
     destroy() {
-        // Clean up timers
         this.classTimers.forEach((timer, classId) => {
             clearInterval(timer);
         });
@@ -1171,7 +1321,7 @@ class LecturerPortal {
     }
 }
 
-// Location Detector Class
+// Location Detector Class (keep the same as before)
 class LocationDetector {
     constructor() {
         this.currentLocation = null;
@@ -1422,4 +1572,4 @@ window.addEventListener('beforeunload', function() {
     if (window.lecturerPortal) {
         window.lecturerPortal.destroy();
     }
-}); 
+});
