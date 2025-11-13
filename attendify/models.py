@@ -333,6 +333,43 @@ class StudentProfile(models.Model):
     @property
     def full_name(self):
         return self.user.get_full_name()
+    
+    @property
+    def course(self):
+        """Get the student's current course from their active enrollment"""
+        try:
+            enrollment = self.enrollments.filter(is_active=True).first()
+            return enrollment.course if enrollment else None
+        except Exception:
+            return None
+
+    @property
+    def department(self):
+        """Get the student's department from their course or units"""
+        try:
+            # Try to get from course first
+            if self.course:
+                return self.course.department
+            
+            # Fallback: get from first enrolled unit
+            enrollment = self.unit_enrollments.filter(is_active=True).first()
+            if enrollment and enrollment.semester_unit.unit.department:
+                return enrollment.semester_unit.unit.department
+            
+            return None
+        except Exception:
+            return None
+
+    @property
+    def current_semester(self):
+        """Get the current semester based on enrollment"""
+        try:
+            enrollment = self.enrollments.filter(is_active=True).first()
+            if enrollment and enrollment.course:
+                return enrollment.course.semesters.filter(is_current=True).first()
+            return None
+        except Exception:
+            return None
 
 class Enrollment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

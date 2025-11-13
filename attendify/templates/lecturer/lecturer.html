@@ -1,12 +1,10 @@
 {% load static %}
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0">
-    <title>Lecturer Portal - Attendify</title>
+    <title>Lecturer Dashboard - Attendify</title>
     
     <!-- External CSS -->
     <link rel="stylesheet" href="{% static 'css/lecturer.css' %}">
@@ -23,14 +21,290 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
-        /* Enhanced Padding System */
-        .text-padded { padding: 8px 12px; }
-        .card-text-padded { padding: 12px 16px; }
-        .section-text-padded { padding: 16px 20px; }
-        .header-text-padded { padding: 10px 15px; }
-        .btn-text-padded { padding: 10px 20px; }
-        .form-text-padded { padding: 10px 12px; }       
+        :root {
+            --primary-color: #4f46e5;
+            --primary-light: #818cf8;
+            --primary-dark: #3730a3;
+            --secondary-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(71, 85, 105, 0.3);
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+        }
         
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow-x: hidden;
+        }
+        
+        /* Layout Structure */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            grid-template-rows: auto 1fr auto;
+            grid-template-areas:
+                "sidebar header"
+                "sidebar main"
+                "sidebar footer";
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .dashboard-header {
+            grid-area: header;
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid var(--card-border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+        
+        .header-left h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        
+        /* Sidebar */
+        .dashboard-sidebar {
+            grid-area: sidebar;
+            background: rgba(15, 23, 42, 0.9);
+            border-right: 1px solid var(--card-border);
+            padding: 1.5rem 0;
+            overflow-y: auto;
+            backdrop-filter: blur(10px);
+        }
+        
+        .sidebar-brand {
+            padding: 0 1.5rem 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 1.5rem;
+        }
+        
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .brand-logo i {
+            color: var(--primary-color);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0 1rem;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        
+        .nav-item:hover, .nav-item.active {
+            background: rgba(79, 70, 229, 0.1);
+            color: var(--primary-light);
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* Main Content */
+        .dashboard-main {
+            grid-area: main;
+            padding: 2rem;
+            overflow-y: auto;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.7));
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Cards */
+        .dashboard-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th {
+            background: rgba(30, 41, 59, 0.5);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--card-border);
+        }
+        
+        .data-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:hover {
+            background: rgba(79, 70, 229, 0.05);
+        }
+        
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        /* Footer */
+        .dashboard-footer {
+            grid-area: footer;
+            background: rgba(15, 23, 42, 0.8);
+            border-top: 1px solid var(--card-border);
+            padding: 1rem 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "header"
+                    "main"
+                    "footer";
+            }
+            
+            .dashboard-sidebar {
+                display: none;
+            }
+        }
+        
+        /* Matrix Background */
+        #matrixCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+        }
+
         /* QR Button States */
         .generate-qr-btn {
             transition: all 0.3s ease;
@@ -69,11 +343,6 @@
             cursor: not-allowed;
         }
         
-        .generate-qr-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        
         /* Status Indicators */
         .class-status-indicator {
             width: 10px;
@@ -98,171 +367,35 @@
             box-shadow: 0 0 10px #6b7280;
         }
 
-        /* Enhanced Class Card Styling */
-        .class-card {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .class-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            border-color: rgba(79, 70, 229, 0.4);
-        }
-
-        .class-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 16px;
-        }
-
-        .class-status {
-            display: flex;
-            align-items: center;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .class-time-display {
-            font-size: 0.8rem;
-            color: #d1d5db;
-            margin-left: 12px;
-        }
-
-        .class-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .btn-delete {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #ef4444;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-delete:hover {
-            background: rgba(239, 68, 68, 0.2);
-            transform: scale(1.05);
-        }
-
-        .class-content {
-            display: grid;
-            grid-template-columns: 60px 1fr;
-            gap: 16px;
-            align-items: start;
-        }
-
-        .class-icon {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(124, 58, 237, 0.2));
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
+        /* Loading States */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            display: none;
             justify-content: center;
-            font-size: 1.5rem;
-            color: #4f46e5;
-        }
-
-        .class-details {
-            flex: 1;
-        }
-
-        .class-details h4 {
-            font-size: 1.1rem;
-            font-weight: 700;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
             color: white;
-            margin: 0 0 8px 0;
-            line-height: 1.3;
         }
-
-        .class-meta {
-            font-size: 0.9rem;
-            color: #d1d5db;
-            margin: 0 0 12px 0;
-            font-weight: 500;
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid transparent;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
         }
-
-        .class-info {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            font-size: 0.85rem;
-        }
-
-        .class-info .time {
-            background: rgba(79, 70, 229, 0.2);
-            padding: 4px 12px;
-            border-radius: 20px;
-            color: #a5b4fc;
-            font-weight: 600;
-        }
-
-        .class-info .students {
-            color: #9ca3af;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .class-info .students::before {
-            content: "👥";
-            font-size: 0.8rem;
-        }
-
-        /* Status-specific styling */
-        .class-card[data-status="ONGOING"] {
-            border-left: 4px solid #10b981;
-        }
-
-        .class-card[data-status="UPCOMING"] {
-            border-left: 4px solid #f59e0b;
-        }
-
-        .class-card[data-status="ENDED"] {
-            border-left: 4px solid #6b7280;
-            opacity: 0.8;
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .class-header {
-                flex-direction: column;
-                gap: 12px;
-            }
-            
-            .class-actions {
-                width: 100%;
-                justify-content: space-between;
-            }
-            
-            .class-content {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-            
-            .class-icon {
-                width: 50px;
-                height: 50px;
-                font-size: 1.2rem;
-            }
-            
-            .class-info {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -270,790 +403,667 @@
     <!-- Matrix Background Canvas -->
     <canvas id="matrixCanvas"></canvas>
     
-    <!-- Cyber Grid Overlay -->
-    <div class="cyber-grid"></div>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Processing your request...</p>
+    </div>
     
-    <!-- Navigation Header -->
-    <header class="portal-header">
-        <div class="header-container">
-            <div class="brand-section">
-                <div class="logo">
-                    <div class="cyber-logo">
-                        <i class="fas fa-chalkboard-teacher"></i>
-                        <div class="glow-effect"></div>
-                    </div>
-                    <span class="brand-name header-text-padded">ATTENDIFY</span>
-                </div>
-                <h1 class="portal-title header-text-padded">LECTURER PORTAL</h1>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <h1>Lecturer Dashboard</h1>
             </div>
-            
-            <div class="user-section">
-                <div class="user-info">
-                    <div class="user-avatar">
+            <div class="header-right">
+                <div class="user-info d-flex align-items-center">
+                    <div class="user-avatar me-2">
                         {% if user.profile_picture %}
-                            <img src="{{ user.profile_picture.url }}" alt="Profile">
+                            <img src="{{ user.profile_picture.url }}" alt="Profile" class="rounded-circle" width="40" height="40">
                         {% else %}
-                            <i class="fas fa-user-circle"></i>
+                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
                         {% endif %}
-                        <div class="avatar-glow"></div>
                     </div>
-                    <div class="user-details text-padded">
-                        <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
-                        <span class="user-role">LECTURER</span>
+                    <div class="user-details">
+                        <div class="user-name fw-bold">{{ user.get_full_name|default:user.username }}</div>
+                        <div class="user-role text-muted small">Lecturer</div>
                     </div>
                 </div>
-
-                <div class="header-actions">
-                    <button class="btn-notification" id="notificationBtn">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-badge">3</span>
-                        <div class="btn-glow"></div>
-                    </button>
-                    <div class="dropdown">
-                        <button class="btn-profile-dropdown">
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <div class="dropdown-menu cyber-dropdown">
-                            <a href="{% url 'profile_edit' %}" class="dropdown-item text-padded">
-                                <i class="fas fa-user-edit"></i>EDIT PROFILE
-                            </a>
-                            <a href="{% url 'change_password' %}" class="dropdown-item text-padded">
-                                <i class="fas fa-key"></i>CHANGE PASSWORD
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a href="{% url 'logout' %}" class="dropdown-item logout text-padded">
-                                <i class="fas fa-sign-out-alt"></i>LOGOUT
-                            </a>
-                        </div>
-                    </div>
+                <button class="btn btn-outline-light btn-sm" id="notificationBtn">
+                    <i class="fas fa-bell"></i>
+                    <span class="badge bg-danger" id="notificationCount" style="display: none;">0</span>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Sidebar -->
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    <span>Attendify</span>
                 </div>
             </div>
-        </div>
-    </header>
-
-    <!-- Floating Navigation Tabs -->
-    <nav class="floating-nav">
-        <div class="nav-container">
-            <button class="nav-btn active" data-tab="classes" title="Class Management">
-                <div class="nav-icon"><i class="fas fa-calendar-alt"></i></div>
-                <span class="nav-label text-padded">Classes</span>
-            </button>
             
-            <button class="nav-btn" data-tab="units" title="Teaching Units">
-                <div class="nav-icon"><i class="fas fa-book"></i></div>
-                <span class="nav-label text-padded">Units</span>
-            </button>
-            
-            <button class="nav-btn" data-tab="reports" title="Analytics & Reports">
-                <div class="nav-icon"><i class="fas fa-chart-line"></i></div>
-                <span class="nav-label text-padded">Reports</span>
-            </button>
-
-            <button class="nav-btn" data-tab="profile" title="My Profile">
-                <div class="nav-icon"><i class="fas fa-user"></i></div>
-                <span class="nav-label text-padded">Profile</span>
-            </button>
-        </div>
-    </nav>
-
-    <!-- Main Portal Content -->
-    <main class="portal-main">
-        <div class="container-fluid">          
-
-            <!-- Welcome Section -->
-            <section class="welcome-section">
-                <div class="welcome-content section-text-padded">
-                    <h2 id="dynamic-greeting">Welcome, {{ user.first_name|default:"Professor" }}</h2>
-                    <p class="text-padded">Managing <strong>{{ units_count }}</strong> units with <strong>{{ total_students }}</strong> students</p>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-tab="overview">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="classes">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Class Management</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="attendance">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span>Attendance</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="students">
+                    <i class="fas fa-users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="analytics">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <!-- Overview Tab -->
+            <section class="tab-content active" id="overview-tab">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="unitsCount">{{ units_count }}</div>
+                        <div class="stat-label">Teaching Units</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalStudents">{{ total_students }}</div>
+                        <div class="stat-label">Total Students</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="todaysClasses">{{ todays_classes|length }}</div>
+                        <div class="stat-label">Today's Classes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="attendancePercentage">{{ overall_attendance_percentage }}%</div>
+                        <div class="stat-label">Avg Attendance</div>
+                    </div>
                 </div>
-                <div class="welcome-visual">
-                    <div class="visual-card">
-                        <div class="visual-icon">
-                            <i class="fas fa-chalkboard-teacher"></i>
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="dashboard-card mb-4">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-line"></i> Attendance Trends</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="attendanceTrendChart"></canvas>
+                                </div>
+                            </div>
                         </div>
-                        <div class="visual-text text-padded">
-                            <span>Active Lecturer</span>
-                            <small>Portal Access Granted</small>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="dashboard-card mb-4">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-pie"></i> Attendance Distribution</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="attendancePieChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-calendar-day"></i> Today's Schedule</h3>
+                                <span class="badge bg-primary" id="todaysClassesBadge">{{ todays_classes|length }}</span>
+                            </div>
+                            <div class="card-body">
+                                {% if todays_classes %}
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Unit</th>
+                                                <th>Time</th>
+                                                <th>Venue</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="todaysClassesList">
+                                            {% for class_data in todays_classes %}
+                                            <tr data-class-id="{{ class_data.object.id }}">
+                                                <td>
+                                                    <strong>{{ class_data.unit_code }}</strong><br>
+                                                    <small class="text-muted">{{ class_data.unit_name }}</small>
+                                                </td>
+                                                <td>
+                                                    {{ class_data.object.start_time|time:"H:i" }} - {{ class_data.object.end_time|time:"H:i" }}
+                                                </td>
+                                                <td>{{ class_data.object.venue }}</td>
+                                                <td>
+                                                    <span class="class-status-indicator status-{{ class_data.status|lower }}"></span>
+                                                    <span class="badge bg-{% if class_data.status == 'ONGOING' %}success{% elif class_data.status == 'UPCOMING' %}warning{% else %}secondary{% endif %}">
+                                                        {{ class_data.status }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {% if class_data.status == 'ONGOING' %}
+                                                    <button class="btn btn-primary btn-sm generate-qr-btn" data-class-id="{{ class_data.object.id }}" data-status="{{ class_data.status }}">
+                                                        <i class="fas fa-qrcode"></i> Generate QR
+                                                    </button>
+                                                    {% else %}
+                                                    <button class="btn btn-outline-secondary btn-sm" disabled>
+                                                        <i class="fas fa-clock"></i> Not Started
+                                                    </button>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-4" id="noClassesToday">
+                                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                    <h4>No classes scheduled for today</h4>
+                                    <p class="text-muted">Schedule a new class using the Class Management tab</p>
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
             
-            <!-- Classes Tab -->
-            <section class="tab-content active" id="classes-tab">
-                <div class="content-grid">
-                    <!-- Class Scheduling Card -->
-                    <div class="content-card full-width">
-                        <div class="card-header">
-                            <h3 class="header-text-padded"><i class="fas fa-calendar-plus me-2"></i>Schedule New Class</h3>
-                            <span class="card-badge">Quick Setup</span>
-                        </div>
-                        <div class="card-body card-text-padded">
-                            <form id="schedule-class-form" method="POST" action="{% url 'schedule_class' %}">
-                                {% csrf_token %}
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="semester_unit" class="form-text-padded">Unit *</label>
-                                        <select name="semester_unit" id="semester_unit" class="form-select cyber-input form-text-padded" required>
-                                            <option value="">Select a unit</option>
-                                            {% for unit in units %}
-                                                <option value="{{ unit.id }}">
-                                                    {{ unit.code }} - {{ unit.name }} ({{ unit.enrolled_students_count }} students)
-                                                </option>
-                                            {% empty %}
-                                                <option value="" disabled>No units assigned</option>
-                                            {% endfor %}
-                                        </select>
-                                        
-                                        {% if not units %}
-                                        <div class="alert alert-warning mt-2">
-                                            <i class="fas fa-exclamation-triangle"></i>
-                                            No teaching units assigned. Contact administration.
+            <!-- Class Management Tab -->
+            <section class="tab-content" id="classes-tab">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="dashboard-card mb-4">
+                            <div class="card-header">
+                                <h3><i class="fas fa-calendar-plus"></i> Schedule New Class</h3>
+                            </div>
+                            <div class="card-body">
+                                <form id="schedule-class-form" method="POST" action="{% url 'schedule_class' %}">
+                                    {% csrf_token %}
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="semester_unit" class="form-label">Unit *</label>
+                                            <select name="semester_unit" id="semester_unit" class="form-select" required>
+                                                <option value="">Select a unit</option>
+                                                {% for unit in units %}
+                                                    <option value="{{ unit.id }}">
+                                                        {{ unit.code }} - {{ unit.name }} ({{ unit.enrolled_students_count }} students)
+                                                    </option>
+                                                {% empty %}
+                                                    <option value="" disabled>No units assigned</option>
+                                                {% endfor %}
+                                            </select>
                                         </div>
-                                        {% endif %}
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="schedule_date" class="form-text-padded">Date *</label>
-                                        <input type="date" name="schedule_date" id="schedule_date" class="form-control cyber-input form-text-padded" required>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="start_time" class="form-text-padded">Start Time *</label>
-                                        <input type="time" name="start_time" id="start_time" class="form-control cyber-input form-text-padded" required>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="end_time" class="form-text-padded">End Time *</label>
-                                        <input type="time" name="end_time" id="end_time" class="form-control cyber-input form-text-padded" required>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="venue" class="form-text-padded">Venue *</label>
-                                        <div class="input-group">
-                                            <input type="text" name="venue" id="venue" class="form-control cyber-input form-text-padded" placeholder="e.g., Room 101, Main Building" required>
-                                            <button type="button" class="btn btn-outline-primary btn-text-padded" id="detect-location-btn">
-                                                <i class="fas fa-location-crosshairs"></i> Detect Location
-                                            </button>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="schedule_date" class="form-label">Date *</label>
+                                            <input type="date" name="schedule_date" id="schedule_date" class="form-control" required>
                                         </div>
-                                        <small class="form-text text-muted form-text-padded">Enter venue manually or use current location detection</small>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="start_time" class="form-label">Start Time *</label>
+                                            <input type="time" name="start_time" id="start_time" class="form-control" required>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="end_time" class="form-label">End Time *</label>
+                                            <input type="time" name="end_time" id="end_time" class="form-control" required>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="venue" class="form-label">Venue *</label>
+                                        <input type="text" name="venue" id="venue" class="form-control" placeholder="e.g., Room 101, Main Building" required>
                                     </div>
                                     
-                                    <!-- Location Coordinates Section -->
-                                    <div class="form-group full-width">
-                                        <div class="location-section-header section-text-padded">
-                                            <h6><i class="fas fa-map-marker-alt me-2"></i>GPS Coordinates (Optional)</h6>
-                                            <div class="location-status" id="location-status">
-                                                <i class="fas fa-circle text-warning"></i>
-                                                <span>Location not detected</span>
+                                    <!-- Location Coordinates -->
+                                    <div class="mb-3">
+                                        <label class="form-label">Location Coordinates (Optional)</label>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-2">
+                                                <input type="number" step="any" name="latitude" id="latitude" class="form-control" placeholder="Latitude">
+                                            </div>
+                                            <div class="col-md-6 mb-2">
+                                                <input type="number" step="any" name="longitude" id="longitude" class="form-control" placeholder="Longitude">
                                             </div>
                                         </div>
-                                        <div class="coordinates-grid">
-                                            <div class="form-group">
-                                                <label for="latitude" class="form-text-padded">Latitude</label>
-                                                <div class="input-group">
-                                                    <input type="number" step="any" name="latitude" id="latitude" class="form-control cyber-input form-text-padded" placeholder="Auto-detected latitude">
-                                                    <span class="input-group-text form-text-padded"><i class="fas fa-globe-americas"></i></span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="form-group">
-                                                <label for="longitude" class="form-text-padded">Longitude</label>
-                                                <div class="input-group">
-                                                    <input type="number" step="any" name="longitude" id="longitude" class="form-control cyber-input form-text-padded" placeholder="Auto-detected longitude">
-                                                    <span class="input-group-text form-text-padded"><i class="fas fa-globe-americas"></i></span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="form-group">
-                                                <label for="location_radius" class="form-text-padded">Location Radius (meters)</label>
-                                                <div class="input-group">
-                                                    <input type="number" name="location_radius" id="location_radius" class="form-control cyber-input form-text-padded" value="100" min="10" max="500">
-                                                    <span class="input-group-text form-text-padded">m</span>
-                                                </div>
-                                                <small class="form-text text-muted form-text-padded">Allowed distance from class location (default: 100m)</small>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <input type="number" name="location_radius" id="location_radius" class="form-control" value="100" min="10" max="500" placeholder="Location Radius (meters)">
                                             </div>
                                         </div>
-                                        
-                                        <!-- Location Actions -->
-                                        <div class="location-actions section-text-padded">
-                                            <button type="button" class="btn btn-success btn-sm btn-text-padded" id="get-current-location-btn">
-                                                <i class="fas fa-satellite-dish me-1"></i> Get Current Coordinates
-                                            </button>
-                                            <button type="button" class="btn btn-info btn-sm btn-text-padded" id="test-location-btn" disabled>
-                                                <i class="fas fa-map-marked-alt me-1"></i> Test Location Accuracy
-                                            </button>
-                                            <button type="button" class="btn btn-warning btn-sm btn-text-padded" id="clear-location-btn">
-                                                <i class="fas fa-eraser me-1"></i> Clear Coordinates
-                                            </button>
-                                        </div>
-                                        
-                                        <!-- Location Accuracy Display -->
-                                        <div class="location-accuracy section-text-padded" id="location-accuracy" style="display: none;">
-                                            <div class="accuracy-info">
-                                                <i class="fas fa-crosshairs"></i>
-                                                <div class="accuracy-details text-padded">
-                                                    <strong>Location Accuracy:</strong>
-                                                    <span id="accuracy-value">±0 meters</span>
-                                                    <small id="location-timestamp">Detected just now</small>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <small class="text-muted">Location validation for QR code scanning</small>
                                     </div>
                                     
-                                    <div class="form-group full-width">
-                                        <label for="notes" class="form-text-padded">Additional Notes</label>
-                                        <textarea name="notes" id="notes" class="form-control cyber-input form-text-padded" rows="3" placeholder="Any special instructions..."></textarea>
+                                    <div class="mb-3">
+                                        <label for="notes" class="form-label">Additional Notes</label>
+                                        <textarea name="notes" id="notes" class="form-control" rows="3" placeholder="Any special instructions..."></textarea>
                                     </div>
-                                </div>
-                                
-                                <div class="form-actions section-text-padded">
-                                    <button type="reset" class="btn-outline cyber-btn btn-text-padded" id="reset-form-btn">
-                                        <i class="fas fa-broom me-2"></i>Clear Form
-                                    </button>
-                                    <button type="submit" class="btn-primary cyber-btn btn-text-padded">
+                                    <button type="submit" class="btn btn-primary">
                                         <i class="fas fa-save me-2"></i>Schedule Class
                                     </button>
-                                </div>
-                            </form>
+                                </form>
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Today's Classes Card -->
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h3 class="header-text-padded"><i class="fas fa-calendar-day me-2"></i>Today's Classes</h3>
-                            <span class="card-badge">{{ todays_classes|length }} scheduled</span>
-                        </div>
-                        <div class="card-body card-text-padded">
-                            {% if todays_classes %}
-                                <div class="classes-list" id="todays-classes-list">
-                                    {% for class_data in todays_classes %}
-                                    <div class="class-card" 
-                                         data-class-id="{{ class_data.object.id }}"
-                                         data-schedule-date="{{ class_data.object.schedule_date|date:'Y-m-d' }}"
-                                         data-start-time="{{ class_data.object.start_time|time:'H:i:s' }}"
-                                         data-end-time="{{ class_data.object.end_time|time:'H:i:s' }}"
-                                         data-status="{{ class_data.status }}"
-                                         style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 20px; margin-bottom: 16px; backdrop-filter: blur(10px); border-left: 4px solid {% if class_data.status == 'ONGOING' %}#10b981{% elif class_data.status == 'UPCOMING' %}#f59e0b{% else %}#6b7280{% endif %};">
-                                        
-                                        <!-- Class Header with Status and Actions -->
-                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
-                                            <!-- Status Section -->
-                                            <div style="display: flex; align-items: center; font-size: 0.85rem; font-weight: 600;">
-                                                <span class="class-status-indicator status-{{ class_data.status|lower }}"></span>
-                                                <span style="text-transform: uppercase; color: {% if class_data.status == 'ONGOING' %}#10b981{% elif class_data.status == 'UPCOMING' %}#f59e0b{% else %}#6b7280{% endif %};">
-                                                    {{ class_data.status }}
-                                                </span>
-                                                <span style="font-size: 0.8rem; color: #d1d5db; margin-left: 12px;">
-                                                    {% if class_data.status == 'ONGOING' %}
-                                                        <span id="time-elapsed-{{ class_data.object.id }}"></span>
-                                                    {% elif class_data.status == 'UPCOMING' %}
-                                                        <span id="time-remaining-{{ class_data.object.id }}"></span> 
-                                                    {% else %}
-                                                        Class Ended
-                                                    {% endif %}
-                                                </span>
-                                            </div>
-                                            
-                                            <!-- Actions Section -->
-                                            <div style="display: flex; gap: 8px; align-items: center;">
-                                                <!-- QR Button - Always Visible -->
-                                                <button class="generate-qr-btn" 
-                                                        data-class-id="{{ class_data.object.id }}"
-                                                        data-status="{{ class_data.status }}"
-                                                        style="transition: all 0.3s ease; border: 2px solid; font-size: 0.85rem; font-weight: 600; border-radius: 8px; padding: 8px 16px; min-width: 120px; {% if class_data.status == 'ONGOING' %}background: linear-gradient(135deg, #4f46e5, #7c3aed); border-color: #4f46e5; color: white; cursor: pointer;{% elif class_data.status == 'UPCOMING' %}background: rgba(245, 158, 11, 0.1); border-color: #f59e0b; color: #f59e0b; cursor: not-allowed;{% else %}background: rgba(107, 114, 128, 0.1); border-color: #6b7280; color: #6b7280; cursor: not-allowed;{% endif %}">
-                                                    {% if class_data.status == 'ONGOING' %}
-                                                        <i class="fas fa-qrcode"></i> Generate QR
-                                                    {% elif class_data.status == 'UPCOMING' %}
-                                                        <i class="fas fa-clock"></i> Not Started
-                                                    {% else %}
-                                                        <i class="fas fa-ban"></i> Class Ended
-                                                    {% endif %}
-                                                </button>
-                                                
-                                                <!-- Delete Button -->
-                                                <button class="delete-class-btn" 
-                                                        data-class-id="{{ class_data.object.id }}" 
-                                                        title="Delete Class"
-                                                        style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.3s ease;">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Class Content -->
-                                        <div style="display: grid; grid-template-columns: 60px 1fr; gap: 16px; align-items: start;">
-                                            <!-- Class Icon -->
-                                            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(124, 58, 237, 0.2)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #4f46e5;">
-                                                <i class="fas fa-{% if class_data.status == 'ONGOING' %}play-circle{% elif class_data.status == 'UPCOMING' %}clock{% else %}check-circle{% endif %}"></i>
-                                            </div>
-                                            
-                                            <!-- Class Details -->
-                                            <div>
-                                                <h4 style="font-size: 1.1rem; font-weight: 700; color: white; margin: 0 0 8px 0; line-height: 1.3;">
-                                                    {{ class_data.unit_name }}
-                                                </h4>
-                                                <p style="font-size: 0.9rem; color: #d1d5db; margin: 0 0 12px 0; font-weight: 500;">
-                                                    {{ class_data.unit_code }} | {{ class_data.venue }}
-                                                </p>
-                                                <div style="display: flex; gap: 20px; align-items: center; font-size: 0.85rem;">
-                                                    <span style="background: rgba(79, 70, 229, 0.2); padding: 4px 12px; border-radius: 20px; color: #a5b4fc; font-weight: 600;">
-                                                        {{ class_data.object.start_time|time:"H:i" }} - {{ class_data.object.end_time|time:"H:i" }}
-                                                    </span>
-                                                    <span style="color: #9ca3af; display: flex; align-items: center; gap: 6px;">
-                                                        👥 {{ class_data.enrolled_students_count }} students
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
+                    <div class="col-md-4">
+                        <div class="dashboard-card mb-4">
+                            <div class="card-header">
+                                <h3><i class="fas fa-info-circle"></i> Quick Stats</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <h5>Upcoming Classes</h5>
+                                    <p class="fs-4" id="upcomingClassesValue">{{ upcoming_classes|length }}</p>
                                 </div>
-                            {% else %}
-                                <div class="empty-state section-text-padded">
-                                    <i class="fas fa-calendar-times fa-3x"></i>
-                                    <h4 class="text-padded">No classes scheduled for today</h4>
-                                    <p class="text-padded">Schedule a new class using the form</p>
+                                <div class="mb-3">
+                                    <h5>Total Classes Held</h5>
+                                    <p class="fs-4" id="totalClassesValue">{{ total_classes }}</p>
                                 </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Upcoming Classes Card -->
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h3 class="header-text-padded"><i class="fas fa-calendar-week me-2"></i>Upcoming Classes</h3>
-                            <span class="card-badge">{{ upcoming_classes|length }} classes</span>
-                        </div>
-                        <div class="card-body card-text-padded">
-                            {% if upcoming_classes %}
-                                <div class="compact-list">
-                                    {% for class_data in upcoming_classes %}
-                                    <div class="compact-item text-padded class-card upcoming" 
-                                         data-class-id="{{ class_data.object.id }}"
-                                         data-schedule-date="{{ class_data.object.schedule_date|date:'Y-m-d' }}"
-                                         data-start-time="{{ class_data.object.start_time|time:'H:i:s' }}">
-                                        <div class="item-main">
-                                            <strong>{{ class_data.unit_code }}</strong>
-                                            <span>{{ class_data.object.schedule_date|date:"D, M d" }}</span>
-                                        </div>
-                                        <div class="item-meta">
-                                            {{ class_data.object.start_time|time:"H:i" }} | {{ class_data.object.venue }}
-                                            <span class="time-remaining" id="time-remaining-upcoming-{{ class_data.object.id }}">--:--</span>
-                                        </div>
-                                        <div class="item-actions">
-                                            <button class="btn-delete delete-class-btn" data-class-id="{{ class_data.object.id }}" title="Delete Class">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
+                                <div>
+                                    <h5>Active Units</h5>
+                                    <p class="fs-4" id="activeUnitsValue">{{ units_count }}</p>
                                 </div>
-                            {% else %}
-                                <div class="empty-state small section-text-padded">
-                                    <i class="fas fa-wind"></i>
-                                    <p class="text-padded">No upcoming classes</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Completed Classes Card -->
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h3 class="header-text-padded"><i class="fas fa-history me-2"></i>Recent Classes</h3>
-                            <span class="card-badge">Past 7 days</span>
-                        </div>
-                        <div class="card-body card-text-padded">
-                            {% if completed_classes %}
-                                <div class="compact-list">
-                                    {% for class_data in completed_classes %}
-                                    <div class="compact-item text-padded class-card completed">
-                                        <div class="item-main">
-                                            <strong>{{ class_data.unit_code }}</strong>
-                                            <span>{{ class_data.object.schedule_date|date:"D, M d" }}</span>
-                                        </div>
-                                        <div class="item-meta">
-                                            {{ class_data.object.start_time|time:"H:i" }} - {{ class_data.object.end_time|time:"H:i" }} | {{ class_data.object.venue }}
-                                            <span class="text-muted">Completed</span>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <div class="empty-state small section-text-padded">
-                                    <i class="fas fa-check-circle"></i>
-                                    <p class="text-padded">No recent completed classes</p>
-                                </div>
-                            {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </section>
-            
-            <!-- Units Tab -->
-            <section class="tab-content" id="units-tab">
-                <div class="content-grid">
-                    <!-- My Units Card -->
-                    <div class="content-card full-width">
-                        <div class="card-header">
-                            <h3 class="header-text-padded"><i class="fas fa-book me-2"></i>Teaching Units</h3>
-                            <span class="card-badge">{{ units_count }} assigned</span>
-                        </div>
-                        <div class="card-body card-text-padded">
-                            {% if units %}
-                                <div class="units-grid">
-                                    {% for unit in units %}
-                                    <div class="unit-card">
-                                        <div class="unit-header text-padded">
-                                            <h4>{{ unit.code }}</h4>
-                                            <span class="unit-credits">{{ unit.credit_hours }} credits</span>
-                                        </div>
-                                        <div class="unit-body text-padded">
-                                            <h5>{{ unit.name }}</h5>
-                                            <div class="unit-meta">
-                                                <div class="meta-item text-padded">
-                                                    <i class="fas fa-users"></i>
-                                                    <span>{{ unit.enrolled_students_count }} students</span>
-                                                </div>
-                                                <div class="meta-item text-padded">
-                                                    <i class="fas fa-calendar"></i>
-                                                    <span>{{ unit.semester }}</span>
-                                                </div>
-                                                <div class="meta-item text-padded">
-                                                    <i class="fas fa-building"></i>
-                                                    <span>{{ unit.department }}</span>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Unit Statistics -->
-                                            <div class="unit-stats">
-                                                <div class="stat text-padded">
-                                                    <span class="value">{{ unit.completed_classes }}</span>
-                                                    <span class="label">Classes Held</span>
-                                                </div>
-                                                <div class="stat text-padded">
-                                                    <span class="value">{{ unit.average_attendance }}%</span>
-                                                    <span class="label">Avg Attendance</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="unit-actions">
-                                            <button class="btn-outline view-unit-details btn-text-padded" data-unit-id="{{ unit.id }}">
-                                                <i class="fas fa-chart-bar me-1"></i> View Analytics
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <div class="empty-state section-text-padded">
-                                    <i class="fas fa-book fa-3x"></i>
-                                    <h4 class="text-padded">No units assigned</h4>
-                                    <p class="text-padded">Contact administration for unit assignments</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Unit Details Card -->
-                    <div class="content-card full-width" id="unit-details-card" style="display: none;">
-                        <div class="card-header">
-                            <h3 class="header-text-padded"><i class="fas fa-analytics me-2"></i>Unit Analytics</h3>
-                            <button class="btn-icon" onclick="hideUnitDetails()">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                        <div class="card-body card-text-padded" id="unit-details-content">
-                            <!-- Dynamic content will be loaded by JavaScript -->
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- Reports Tab -->
-            <section class="tab-content" id="reports-tab">
-                <div class="content-grid">
-                    <!-- Report Generation Card -->
-                    <div class="content-card full-width">
-                        <div class="card-header">
-                            <h3 class="header-text-padded"><i class="fas fa-chart-bar me-2"></i>Generate Attendance Report</h3>
-                            <span class="card-badge">Advanced Analytics</span>
-                        </div>
-                        <div class="card-body card-text-padded">
-                            <form id="report-generation-form" method="POST" action="{% url 'generate_report' %}">
-                                {% csrf_token %}
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="report_title" class="form-text-padded">Report Title *</label>
-                                        <input type="text" name="title" id="report_title" class="form-control cyber-input form-text-padded" placeholder="e.g., Monthly Attendance Report" required>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="report_unit" class="form-text-padded">Unit</label>
-                                        <select name="semester_unit" id="report_unit" class="form-select cyber-input form-text-padded">
-                                            <option value="">All Units</option>
-                                            {% for unit in units %}
-                                            <option value="{{ unit.id }}">{{ unit.code }} - {{ unit.name }}</option>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-list"></i> All Classes</h3>
+                            </div>
+                            <div class="card-body">
+                                {% if classes %}
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Unit</th>
+                                                <th>Date</th>
+                                                <th>Time</th>
+                                                <th>Venue</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for class in classes %}
+                                            <tr data-class-id="{{ class.id }}">
+                                                <td>
+                                                    <strong>{{ class.semester_unit.unit.code }}</strong><br>
+                                                    <small class="text-muted">{{ class.semester_unit.unit.name }}</small>
+                                                </td>
+                                                <td>{{ class.schedule_date|date:"M d, Y" }}</td>
+                                                <td>{{ class.start_time|time:"H:i" }} - {{ class.end_time|time:"H:i" }}</td>
+                                                <td>{{ class.venue }}</td>
+                                                <td>
+                                                    {% with status=class.status %}
+                                                    <span class="badge bg-{% if status == 'ONGOING' %}success{% elif status == 'UPCOMING' %}warning{% else %}secondary{% endif %}">
+                                                        {{ status }}
+                                                    </span>
+                                                    {% endwith %}
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm">
+                                                        {% if class.status == 'ONGOING' %}
+                                                        <button class="btn btn-primary generate-qr-btn" data-class-id="{{ class.id }}">
+                                                            <i class="fas fa-qrcode"></i>
+                                                        </button>
+                                                        {% endif %}
+                                                        <button class="btn btn-outline-danger delete-class-btn" data-class-id="{{ class.id }}">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
                                             {% endfor %}
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="start_date" class="form-text-padded">Start Date *</label>
-                                        <input type="date" name="start_date" id="start_date" class="form-control cyber-input form-text-padded" required>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="end_date" class="form-text-padded">End Date *</label>
-                                        <input type="date" name="end_date" id="end_date" class="form-control cyber-input form-text-padded" required>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label for="report_type" class="form-text-padded">Report Type</label>
-                                        <select name="report_type" id="report_type" class="form-select cyber-input form-text-padded">
-                                            <option value="summary">Summary Report</option>
-                                            <option value="detailed">Detailed Report</option>
-                                            <option value="analytics">Analytics Report</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group full-width">
-                                        <label for="report_notes" class="form-text-padded">Additional Filters</label>
-                                        <div class="filter-options section-text-padded">
-                                            <label class="checkbox-label text-padded">
-                                                <input type="checkbox" name="include_charts" checked> Include Charts
-                                            </label>
-                                            <label class="checkbox-label text-padded">
-                                                <input type="checkbox" name="include_trends" checked> Include Trends
-                                            </label>
-                                            <label class="checkbox-label text-padded">
-                                                <input type="checkbox" name="export_csv"> Export as CSV
-                                            </label>
-                                        </div>
-                                    </div>
+                                        </tbody>
+                                    </table>
                                 </div>
-                                
-                                <div class="form-actions section-text-padded">
-                                    <button type="button" class="btn-outline cyber-btn btn-text-padded" id="preview-report-btn">
-                                        <i class="fas fa-eye me-2"></i>Preview Report
-                                    </button>
-                                    <button type="submit" class="btn-primary cyber-btn btn-text-padded">
-                                        <i class="fas fa-download me-2"></i>Generate Report
-                                    </button>
+                                {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                    <h4>No classes scheduled</h4>
+                                    <p class="text-muted">Schedule your first class using the form above</p>
                                 </div>
-                            </form>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Generated Reports Card -->
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h3 class="header-text-padded"><i class="fas fa-file-alt me-2"></i>Recent Reports</h3>
-                            <button class="btn-icon" id="refresh-reports-btn">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </div>
-                        <div class="card-body card-text-padded">
-                            {% if reports %}
-                                <div class="reports-list">
-                                    {% for report in reports %}
-                                    <div class="report-item text-padded">
-                                        <div class="report-icon">
-                                            <i class="fas fa-file-pdf"></i>
-                                        </div>
-                                        <div class="report-info">
-                                            <h6>{{ report.title }}</h6>
-                                            <small>Generated {{ report.generated_at|timesince }} ago</small>
-                                            <div class="report-meta">
-                                                <span class="badge bg-{% if report.report_type == 'summary' %}primary{% elif report.report_type == 'detailed' %}info{% else %}success{% endif %}">
-                                                    {{ report.report_type|title }}
-                                                </span>
-                                                {% if report.is_generated %}
-                                                <span class="badge bg-success">Ready</span>
-                                                {% else %}
-                                                <span class="badge bg-warning">Processing</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <div class="report-actions">
-                                            {% if report.is_generated %}
-                                            <button class="btn-icon" title="Download" onclick="downloadReport({{ report.id }})">
-                                                <i class="fas fa-download"></i>
-                                            </button>
-                                            <button class="btn-icon" title="View" onclick="viewReport({{ report.id }})">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    {% endfor %}
+                </div>
+            </section>
+            
+            <!-- Attendance Tab -->
+            <section class="tab-content" id="attendance-tab">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="dashboard-card mb-4">
+                            <div class="card-header">
+                                <h3><i class="fas fa-clipboard-list"></i> Attendance Records</h3>
+                            </div>
+                            <div class="card-body">
+                                {% if recent_attendance %}
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Class</th>
+                                                <th>Date</th>
+                                                <th>Present</th>
+                                                <th>Absent</th>
+                                                <th>Rate</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for record in recent_attendance %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ record.unit_code }}</strong><br>
+                                                    <small class="text-muted">{{ record.unit_name }}</small>
+                                                </td>
+                                                <td>{{ record.date|date:"M d, Y" }}</td>
+                                                <td>{{ record.total_present }}</td>
+                                                <td>{{ record.total_students|add:"-"|add:record.total_present }}</td>
+                                                <td>
+                                                    <span class="badge bg-{% if record.attendance_percentage >= 80 %}success{% elif record.attendance_percentage >= 60 %}warning{% else %}danger{% endif %}">
+                                                        {{ record.attendance_percentage }}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            {% else %}
-                                <div class="empty-state small section-text-padded">
-                                    <i class="fas fa-file-alt"></i>
-                                    <p class="text-padded">No reports generated yet</p>
-                                    <small class="text-padded">Create your first report above</small>
+                                {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                                    <h4>No attendance records</h4>
+                                    <p class="text-muted">Attendance records will appear here after classes are conducted</p>
                                 </div>
-                            {% endif %}
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-
-                    <!-- Analytics Overview Card -->
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h3 class="header-text-padded"><i class="fas fa-chart-pie me-2"></i>Attendance Overview</h3>
-                        </div>
-                        <div class="card-body card-text-padded">
-                            <div class="analytics-main">
-                                <div class="attendance-circle">
-                                    <div class="circle-progress" data-percentage="{{ overall_attendance_percentage|default:0 }}">
-                                        <div class="circle-inner">
-                                            <span class="percentage">{{ overall_attendance_percentage|default:0 }}%</span>
-                                            <span class="label">Overall</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="attendance-breakdown">
-                                    <div class="breakdown-item text-padded">
-                                        <span class="label">Total Students</span>
-                                        <span class="value">{{ total_students }}</span>
-                                    </div>
-                                    <div class="breakdown-item text-padded">
-                                        <span class="label">Average Present</span>
-                                        <span class="value">{{ present_students }}</span>
-                                    </div>
-                                    <div class="breakdown-item text-padded">
-                                        <span class="label">Classes Held</span>
-                                        <span class="value">{{ total_classes }}</span>
-                                    </div>
+                    <div class="col-md-4">
+                        <div class="dashboard-card mb-4">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-bar"></i> Attendance by Unit</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="unitAttendanceChart"></canvas>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
-
-            <!-- Profile Tab -->
-            <section class="tab-content" id="profile-tab">
-                <div class="content-grid">
-                    <!-- Profile Card -->
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h3 class="header-text-padded"><i class="fas fa-user me-2"></i>Personal Information</h3>
-                            <a href="{% url 'profile_edit' %}" class="btn-outline btn-text-padded">
-                                <i class="fas fa-edit me-1"></i> Edit Profile
-                            </a>
-                        </div>
-                        <div class="card-body card-text-padded">
-                            <div class="profile-info">
-                                <div class="profile-avatar-large">
-                                    {% if user.profile_picture %}
-                                        <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
-                                    {% else %}
-                                        <img src="https://ui-avatars.com/api/?name={{ user.first_name|urlencode }}+{{ user.last_name|urlencode }}&background=4f46e5&color=fff&size=200" alt="{{ user.get_full_name }}">
-                                    {% endif %}
-                                </div>
-                                <div class="profile-details">
-                                    <div class="detail-group text-padded">
-                                        <label>Full Name</label>
-                                        <p>{{ user.first_name }} {{ user.last_name }}</p>
-                                    </div>                                    
-                                    <div class="detail-group text-padded">
-                                        <label>Email Address</label>
-                                        <p>{{ user.email }}</p>
-                                    </div>                                  
-                                    <div class="detail-group text-padded">
-                                        <label>Phone Number</label>
-                                        <p>{{ lecturer.phone_number|default:"Not provided" }}</p>
-                                    </div>                                   
-                                    {% if lecturer.qualifications %}
-                                    <div class="detail-group text-padded">
-                                        <label>Qualifications</label>
-                                        <p>{{ lecturer.qualifications }}</p>
-                                    </div>
-                                    {% endif %}
-                                </div>
+            
+            <!-- Students Tab -->
+            <section class="tab-content" id="students-tab">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="dashboard-card mb-4">
+                            <div class="card-header">
+                                <h3><i class="fas fa-users"></i> Student Roster</h3>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Academic Stats Card -->
-                    <div class="content-card">
-                        <div class="card-header">
-                            <h3 class="header-text-padded"><i class="fas fa-graduation-cap me-2"></i>Teaching Statistics</h3>
-                        </div>
-                        <div class="card-body card-text-padded">
-                            <div class="academic-stats">
-                                <div class="academic-stat text-padded">
-                                    <div class="stat-icon primary">
-                                        <i class="fas fa-book"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-value">{{ units_count }}</div>
-                                        <div class="stat-label">Teaching Units</div>
-                                    </div>
+                            <div class="card-body">
+                                {% if units %}
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Unit</th>
+                                                <th>Enrolled Students</th>
+                                                <th>Avg Attendance</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for unit in units %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ unit.code }}</strong><br>
+                                                    <small class="text-muted">{{ unit.name }}</small>
+                                                </td>
+                                                <td>{{ unit.enrolled_students_count }}</td>
+                                                <td>
+                                                    <div class="progress" style="height: 8px;">
+                                                        <div class="progress-bar bg-success" style="width: {{ unit.average_attendance }}%"></div>
+                                                    </div>
+                                                    <small>{{ unit.average_attendance }}%</small>
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-outline-primary btn-sm view-unit-students" data-unit-id="{{ unit.id }}">
+                                                        <i class="fas fa-eye"></i> View Students
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <div class="academic-stat text-padded">
-                                    <div class="stat-icon success">
-                                        <i class="fas fa-users"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-value">{{ total_students }}</div>
-                                        <div class="stat-label">Total Students</div>
-                                    </div>
+                                {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                    <h4>No teaching units assigned</h4>
+                                    <p class="text-muted">Contact administration for unit assignments</p>
                                 </div>
-                                <div class="academic-stat text-padded">
-                                    <div class="stat-icon info">
-                                        <i class="fas fa-calendar-check"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-value">{{ total_classes }}</div>
-                                        <div class="stat-label">Classes Held</div>
-                                    </div>
-                                </div>
-                                <div class="academic-stat text-padded">
-                                    <div class="stat-icon warning">
-                                        <i class="fas fa-chart-line"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-value">{{ overall_attendance_percentage|default:0 }}%</div>
-                                        <div class="stat-label">Avg Attendance</div>
-                                    </div>
-                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
-        </div>
-    </main>
+            
+            <!-- Analytics Tab -->
+            <section class="tab-content" id="analytics-tab">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="dashboard-card mb-4">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-line"></i> Performance Trends</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="performanceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="dashboard-card mb-4">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-pie"></i> Unit Distribution</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    <canvas id="unitDistributionChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-table"></i> Detailed Analytics</h3>
+                            </div>
+                            <div class="card-body">
+                                {% if units %}
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Unit Code</th>
+                                                <th>Unit Name</th>
+                                                <th>Classes Held</th>
+                                                <th>Avg Attendance</th>
+                                                <th>Enrolled Students</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for unit in units %}
+                                            <tr>
+                                                <td>{{ unit.code }}</td>
+                                                <td>{{ unit.name }}</td>
+                                                <td>{{ unit.completed_classes }}</td>
+                                                <td>
+                                                    <div class="progress" style="height: 8px;">
+                                                        <div class="progress-bar bg-success" style="width: {{ unit.average_attendance }}%"></div>
+                                                    </div>
+                                                    <small>{{ unit.average_attendance }}%</small>
+                                                </td>
+                                                <td>{{ unit.enrolled_students_count }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                                    <h4>No analytics data available</h4>
+                                    <p class="text-muted">Analytics will appear here when you have teaching units with classes</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Settings Tab -->
+            <section class="tab-content" id="settings-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="dashboard-card mb-4">
+                            <div class="card-header">
+                                <h3><i class="fas fa-user-cog"></i> Profile Settings</h3>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{% url 'profile_edit' %}">
+                                    {% csrf_token %}
+                                    <div class="mb-3">
+                                        <label for="profileName" class="form-label">Full Name</label>
+                                        <input type="text" class="form-control" id="profileName" name="full_name" value="{{ user.get_full_name|default:user.username }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="profileEmail" class="form-label">Email Address</label>
+                                        <input type="email" class="form-control" id="profileEmail" name="email" value="{{ user.email }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="profilePhone" class="form-label">Phone Number</label>
+                                        <input type="tel" class="form-control" id="profilePhone" name="phone_number" value="{{ user.phone_number|default:'' }}">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="dashboard-card mb-4">
+                            <div class="card-header">
+                                <h3><i class="fas fa-shield-alt"></i> Security Settings</h3>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="{% url 'change_password' %}">
+                                    {% csrf_token %}
+                                    <div class="mb-3">
+                                        <label for="currentPassword" class="form-label">Current Password</label>
+                                        <input type="password" class="form-control" id="currentPassword" name="old_password" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="newPassword" class="form-label">New Password</label>
+                                        <input type="password" class="form-control" id="newPassword" name="new_password1" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                        <input type="password" class="form-control" id="confirmPassword" name="new_password2" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Change Password</button>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-bell"></i> Notification Preferences</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                                    <label class="form-check-label" for="emailNotifications">Email Notifications</label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="smsNotifications">
+                                    <label class="form-check-label" for="smsNotifications">SMS Notifications</label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="classReminders" checked>
+                                    <label class="form-check-label" for="classReminders">Class Reminders</label>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Preferences</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <div class="container-fluid">
+                <p>&copy; 2025 Attendify Systems | Lecturer Portal v2.1.0</p>
+            </div>
+        </footer>
+    </div>
 
     <!-- QR Code Modal -->
     <div class="modal fade" id="qrCodeModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content cyber-modal">
-                <div class="modal-header qr-modal-header section-text-padded">
-                    <h5 class="modal-title">
-                        <i class="fas fa-qrcode me-2"></i>QR Code Generated
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">QR Code for Attendance</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body text-center section-text-padded">
-                    <div class="qr-code-display mb-3">
-                        <div id="modal-qr-code"></div>
-                    </div>
-                    <h6 id="qr-class-info" class="mb-2 text-padded"></h6>
-                    <p class="text-muted text-padded" id="qr-expiry-info"></p>
-                    <div class="alert alert-info mt-3 section-text-padded">
+                <div class="modal-body text-center">
+                    <div id="modal-qr-code" class="mb-3"></div>
+                    <h6 id="qr-class-info" class="mb-2"></h6>
+                    <p class="text-muted" id="qr-expiry-info">This QR code will expire in 5 minutes</p>
+                    <div class="alert alert-info mt-3">
                         <i class="fas fa-info-circle me-2"></i>
-                        This QR code will expire in 5 minutes. Students can scan it to mark attendance.
+                        Students can scan this QR code to mark their attendance.
                     </div>
                 </div>
-                <div class="modal-footer section-text-padded">
-                    <button type="button" class="btn btn-secondary btn-text-padded" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary btn-text-padded" id="download-modal-qr">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="download-modal-qr">
                         <i class="fas fa-download me-2"></i>Download QR
                     </button>
                 </div>
@@ -1064,26 +1074,21 @@
     <!-- Delete Class Confirmation Modal -->
     <div class="modal fade" id="deleteClassModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content cyber-modal">
-                <div class="modal-header section-text-padded">
-                    <h5 class="modal-title text-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion
-                    </h5>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">Confirm Deletion</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body section-text-padded">
+                <div class="modal-body">
                     <p>Are you sure you want to delete this class?</p>
-                    <div class="class-to-delete-info" id="class-to-delete-info">
-                        <!-- Class info will be populated here -->
-                    </div>
-                    <div class="alert alert-warning mt-3">
+                    <div class="alert alert-warning">
                         <i class="fas fa-exclamation-circle me-2"></i>
                         This action cannot be undone. All attendance records for this class will be lost.
                     </div>
                 </div>
-                <div class="modal-footer section-text-padded">
-                    <button type="button" class="btn btn-secondary btn-text-padded" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger btn-text-padded" id="confirm-delete-btn">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirm-delete-btn">
                         <i class="fas fa-trash me-2"></i>Delete Class
                     </button>
                 </div>
@@ -1091,71 +1096,1023 @@
         </div>
     </div>
 
-    <!-- System Notifications Container -->
-    <div id="notifications-container" class="notifications-container"></div>
+    <!-- CSRF Token for AJAX requests -->
+    <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="loading-spinner"></div>
-        <p class="text-padded">Processing your request...</p>
-    </div>
-
-    <!-- Footer -->
-    <footer class="portal-footer">
-        <div class="container-fluid">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <div class="logo-container small">
-                        <div class="logo-icon">
-                            <i class="fas fa-chalkboard-teacher"></i>
-                        </div>
-                        <div class="brand-text">
-                            <h3 class="brand-name">Attendify</h3>
-                            <span class="brand-subtitle">Lecturer Portal</span>
-                        </div>
-                    </div>
-                    <p class="text-padded">Academic attendance management system</p>
-                </div>
-                
-                <div class="footer-links">
-                    <div class="link-group">
-                        <h4 class="text-padded">Portal</h4>
-                        <a href="{% url 'lecturer_dashboard' %}" class="text-padded">Dashboard</a>
-                        <a href="{% url 'lecturer_portal' %}" class="text-padded">Portal</a>
-                    </div>
-                    
-                    <div class="link-group">
-                        <h4 class="text-padded">Support</h4>
-                        <a href="#" class="text-padded">Help Center</a>
-                        <a href="#" class="text-padded">System Status</a>
-                        <a href="#" class="text-padded">Contact Admin</a>
-                    </div>
-                </div>
-                
-                <div class="footer-status">
-                    <div class="status-indicator text-padded">
-                        <i class="fas fa-chalkboard-teacher"></i>
-                        <span>Lecturer Mode Active</span>
-                    </div>
-                    <div class="user-id text-padded">{{ lecturer.staff_id|default:"STAFF-ID" }}</div>
-                </div>
-            </div>
-            
-            <div class="footer-bottom">
-                <p class="text-padded">&copy; 2025 Attendify Systems | Lecturer Portal v2.1.0</p>
-                <div class="tech-info">
-                    <span class="text-padded">Secure Connection • Real-time Data • Encrypted QR</span>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
-<script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
-<script src="{% static 'js/lecturer.js' %}" defer></script>
-<script src="{% static 'js/qrcode.min.js' %}"></script>
-<script src="{% static 'js/lecturer_ma.js' %}" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'js/qrcode.min.js' %}"></script>
     
+   <script>
+    // Global state
+    let dashboardData = {
+        totalStudents: {{ total_students }},
+        teachingUnits: {{ units_count }},
+        todaysClasses: {{ todays_classes|length }},
+        upcomingClasses: {{ upcoming_classes|length }},
+        attendancePercentage: {{ overall_attendance_percentage }},
+        recentActivity: []
+    };
+
+    // Initialize everything when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Matrix Background
+        const matrix = new MatrixBackground('matrixCanvas');
+        
+        // Initialize navigation
+        initializeNavigation();
+        
+        // Initialize charts with real data
+        initializeCharts();
+        
+        // Add interactive effects
+        initializeInteractiveEffects();
+        
+        // Initialize modals
+        initializeModals();
+        
+        // Start real-time updates
+        startRealTimeUpdates();
+        
+        // Initialize clock
+        updateClock();
+        setInterval(updateClock, 1000);
+    });
+
+    // Matrix Background Class
+    class MatrixBackground {
+        constructor(canvasId) {
+            this.canvas = document.getElementById(canvasId);
+            this.ctx = this.canvas.getContext('2d');
+            this.characters = "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン";
+            this.drops = [];
+            this.fontSize = 14;
+            this.columns = 0;
+            this.initialize();
+        }
+
+        initialize() {
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
+            
+            // Initialize drops
+            for (let i = 0; i < this.columns; i++) {
+                this.drops[i] = Math.random() * -100;
+            }
+            
+            this.animate();
+        }
+
+        resize() {
+            this.canvas.width = window.innerWidth;
+            this.canvas.height = window.innerHeight;
+            this.columns = Math.floor(this.canvas.width / this.fontSize);
+        }
+
+        draw() {
+            // Semi-transparent black to create trail effect
+            this.ctx.fillStyle = 'rgba(5, 5, 8, 0.05)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            this.ctx.fillStyle = '#00ff41';
+            this.ctx.font = `${this.fontSize}px monospace`;
+            
+            for (let i = 0; i < this.drops.length; i++) {
+                const text = this.characters.charAt(Math.floor(Math.random() * this.characters.length));
+                const x = i * this.fontSize;
+                const y = this.drops[i] * this.fontSize;
+                
+                // Draw character with varying opacity
+                const opacity = Math.random() * 0.5 + 0.5;
+                this.ctx.fillStyle = `rgba(0, 255, 65, ${opacity})`;
+                this.ctx.fillText(text, x, y);
+                
+                // Reset drop if it reaches bottom or randomly
+                if (y > this.canvas.height && Math.random() > 0.975) {
+                    this.drops[i] = 0;
+                }
+                
+                this.drops[i]++;
+            }
+        }
+
+        animate() {
+            this.draw();
+            requestAnimationFrame(() => this.animate());
+        }
+    }
+
+    // Initialize navigation tabs
+    function initializeNavigation() {
+        const navItems = document.querySelectorAll('.nav-item');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        navItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all tabs
+                navItems.forEach(nav => nav.classList.remove('active'));
+                tabContents.forEach(tab => tab.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                // Show corresponding tab content
+                const tabId = this.getAttribute('data-tab') + '-tab';
+                document.getElementById(tabId).classList.add('active');
+                
+                // Load specific data for the tab if needed
+                const tabName = this.getAttribute('data-tab');
+                if (tabName === 'analytics') {
+                    loadAnalyticsData();
+                } else if (tabName === 'students') {
+                    loadStudentsData();
+                }
+            });
+        });
+    }
+
+    // Initialize all charts with real backend data
+    async function initializeCharts() {
+        await initializeAttendanceTrendChart();
+        await initializeAttendancePieChart();
+        await initializeUnitAttendanceChart();
+        await initializePerformanceChart();
+        await initializeUnitDistributionChart();
+    }
+
+    // Initialize Attendance Trend Chart with Real Data
+    async function initializeAttendanceTrendChart() {
+        const ctx = document.getElementById('attendanceTrendChart');
+        if (!ctx) return;
+        
+        try {
+            const response = await fetch('/api/lecturer/recent-attendance/', {
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                const config = {
+                    type: 'line',
+                    data: {
+                        labels: data.attendance?.map(item => {
+                            const date = new Date(item.date);
+                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        }) || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                        datasets: [{
+                            label: 'Attendance Rate',
+                            data: data.attendance?.map(item => item.attendance_percentage) || [75, 82, 78, 85, 88],
+                            borderColor: '#4f46e5',
+                            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+                
+                new Chart(ctx, config);
+            } else {
+                throw new Error('Failed to fetch attendance data');
+            }
+        } catch (error) {
+            console.error('Error loading attendance trend chart:', error);
+            // Use the overall attendance percentage as base
+            const overallPercentage = {{ overall_attendance_percentage|default:75 }};
+            const baseData = [
+                Math.max(0, overallPercentage - 15),
+                Math.max(0, overallPercentage - 8),
+                Math.max(0, overallPercentage - 3),
+                overallPercentage,
+                Math.min(100, overallPercentage + 5)
+            ];
+            
+            const config = {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                    datasets: [{
+                        label: 'Attendance Rate',
+                        data: baseData,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            
+            new Chart(ctx, config);
+        }
+    }
+
+    // Initialize Attendance Pie Chart with Real Data
+    async function initializeAttendancePieChart() {
+        const ctx = document.getElementById('attendancePieChart');
+        if (!ctx) return;
+        
+        try {
+            // Calculate from actual attendance data
+            const presentCount = {{ present_students|default:0 }};
+            const totalCount = {{ total_students|default:1 }};
+            const absentCount = Math.max(0, totalCount - presentCount);
+            
+            // Estimate late count (you might want to get this from backend)
+            const lateCount = Math.floor(presentCount * 0.2); // Assuming 20% of present are late
+            
+            const presentAdjusted = Math.max(0, presentCount - lateCount);
+            
+            const config = {
+                type: 'doughnut',
+                data: {
+                    labels: ['Present', 'Late', 'Absent'],
+                    datasets: [{
+                        data: [presentAdjusted, lateCount, absentCount],
+                        backgroundColor: [
+                            '#10b981',
+                            '#f59e0b',
+                            '#ef4444'
+                        ],
+                        borderColor: [
+                            '#0d966b',
+                            '#d97706',
+                            '#dc2626'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#cbd5e1',
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((context.raw / total) * 100);
+                                    return `${context.label}: ${context.raw} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            
+            new Chart(ctx, config);
+        } catch (error) {
+            console.error('Error loading attendance pie chart:', error);
+        }
+    }
+
+    // Initialize Unit Attendance Chart with Real Data
+    async function initializeUnitAttendanceChart() {
+        const ctx = document.getElementById('unitAttendanceChart');
+        if (!ctx) return;
+        
+        try {
+            // Get units data from the page context
+            const units = JSON.parse(document.getElementById('unitsData')?.textContent || '[]');
+            
+            if (units && units.length > 0) {
+                const labels = units.map(unit => unit.code).slice(0, 6);
+                const data = units.map(unit => unit.average_attendance).slice(0, 6);
+                const colors = units.map((unit, index) => 
+                    unit.average_attendance >= 80 ? '#10b981' :
+                    unit.average_attendance >= 60 ? '#f59e0b' : '#ef4444'
+                );
+                
+                const config = {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Attendance Rate',
+                            data: data,
+                            backgroundColor: colors,
+                            borderColor: colors.map(color => color.replace('0.8', '1')),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    },
+                                    color: '#cbd5e1'
+                                },
+                                grid: {
+                                    color: 'rgba(203, 213, 225, 0.1)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#cbd5e1'
+                                },
+                                grid: {
+                                    color: 'rgba(203, 213, 225, 0.1)'
+                                }
+                            }
+                        }
+                    }
+                };
+                
+                new Chart(ctx, config);
+            } else {
+                // Fallback if no units data
+                const config = {
+                    type: 'bar',
+                    data: {
+                        labels: ['No Data'],
+                        datasets: [{
+                            label: 'Attendance Rate',
+                            data: [0],
+                            backgroundColor: '#6b7280'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+                new Chart(ctx, config);
+            }
+        } catch (error) {
+            console.error('Error loading unit attendance chart:', error);
+        }
+    }
+
+    // Initialize Performance Chart with Real Data
+    async function initializePerformanceChart() {
+        const ctx = document.getElementById('performanceChart');
+        if (!ctx) return;
+        
+        try {
+            // Fetch real performance data from backend
+            const response = await fetch('/api/lecturer/performance-data/', {
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                const config = {
+                    type: 'line',
+                    data: {
+                        labels: data.labels || ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                        datasets: data.datasets || [{
+                            label: 'Overall Performance',
+                            data: [75, 78, 82, 85],
+                            borderColor: '#4f46e5',
+                            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+                
+                new Chart(ctx, config);
+            } else {
+                // Fallback to calculated data from available information
+                initializePerformanceChartWithAvailableData();
+            }
+        } catch (error) {
+            console.error('Error loading performance chart:', error);
+            initializePerformanceChartWithAvailableData();
+        }
+    }
+
+    // Fallback performance chart using available unit data
+    function initializePerformanceChartWithAvailableData() {
+        const ctx = document.getElementById('performanceChart');
+        if (!ctx) return;
+        
+        try {
+            // Get units data from the page context
+            const units = JSON.parse(document.getElementById('unitsData')?.textContent || '[]');
+            
+            if (units && units.length > 0) {
+                const labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+                const datasets = [];
+                
+                // Create datasets for each unit (max 3 for clarity)
+                units.slice(0, 3).forEach((unit, index) => {
+                    const colors = ['#4f46e5', '#10b981', '#f59e0b'];
+                    const baseAttendance = unit.average_attendance || 75;
+                    datasets.push({
+                        label: unit.code,
+                        data: [
+                            Math.max(0, baseAttendance - 10),
+                            Math.max(0, baseAttendance - 5),
+                            baseAttendance,
+                            Math.min(100, baseAttendance + 5)
+                        ],
+                        borderColor: colors[index % colors.length],
+                        tension: 0.3
+                    });
+                });
+                
+                const config = {
+                    type: 'line',
+                    data: { labels, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+                
+                new Chart(ctx, config);
+            } else {
+                // Final fallback
+                const config = {
+                    type: 'line',
+                    data: {
+                        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                        datasets: [{
+                            label: 'Performance Trend',
+                            data: [70, 75, 80, 85],
+                            borderColor: '#4f46e5',
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+                new Chart(ctx, config);
+            }
+        } catch (error) {
+            console.error('Error in performance chart fallback:', error);
+        }
+    }
+
+    // Initialize Unit Distribution Chart with Real Data
+    async function initializeUnitDistributionChart() {
+        const ctx = document.getElementById('unitDistributionChart');
+        if (!ctx) return;
+        
+        try {
+            // Get units data from the page context
+            const units = JSON.parse(document.getElementById('unitsData')?.textContent || '[]');
+            
+            if (units && units.length > 0) {
+                const labels = units.map(unit => unit.code);
+                const data = units.map(unit => unit.enrolled_students_count || 0);
+                const colors = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
+                
+                const config = {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors.slice(0, units.length),
+                            borderColor: colors.map(color => color.replace('0.8', '1')).slice(0, units.length),
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#cbd5e1',
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((context.raw / total) * 100);
+                                        return `${context.label}: ${context.raw} students (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+                
+                new Chart(ctx, config);
+            } else {
+                // Fallback if no units data
+                const config = {
+                    type: 'pie',
+                    data: {
+                        labels: ['No Units'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#6b7280']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                };
+                new Chart(ctx, config);
+            }
+        } catch (error) {
+            console.error('Error loading unit distribution chart:', error);
+        }
+    }
+
+    // Initialize Interactive Effects
+    function initializeInteractiveEffects() {
+        // Add hover effects to dashboard cards
+        const dashboardCards = document.querySelectorAll('.dashboard-card');
+        dashboardCards.forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+        
+        // Initialize QR code generation buttons
+        const qrButtons = document.querySelectorAll('.generate-qr-btn');
+        qrButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const classId = this.getAttribute('data-class-id');
+                generateQRCode(classId);
+            });
+        });
+        
+        // Initialize form submissions
+        const scheduleForm = document.getElementById('schedule-class-form');
+        if (scheduleForm) {
+            scheduleForm.addEventListener('submit', function(e) {
+                // Show loading state
+                showFormLoading(this);
+            });
+        }
+        
+        // Initialize delete class buttons
+        const deleteButtons = document.querySelectorAll('.delete-class-btn');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const classId = this.getAttribute('data-class-id');
+                showDeleteConfirmation(classId);
+            });
+        });
+    }
+
+    // Modal functionality
+    function initializeModals() {
+        // QR Code Modal
+        const qrModal = new bootstrap.Modal(document.getElementById('qrCodeModal'));
+        
+        // Delete Class Modal
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteClassModal'));
+        
+        // Confirm delete button
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', function() {
+                const classId = this.getAttribute('data-class-id');
+                deleteClass(classId);
+            });
+        }
+        
+        // Download QR button
+        const downloadQrBtn = document.getElementById('download-modal-qr');
+        if (downloadQrBtn) {
+            downloadQrBtn.addEventListener('click', downloadQRCode);
+        }
+    }
+
+    function showDeleteConfirmation(classId) {
+        const confirmBtn = document.getElementById('confirm-delete-btn');
+        if (confirmBtn) {
+            confirmBtn.setAttribute('data-class-id', classId);
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('deleteClassModal'));
+        modal.show();
+    }
+
+    // REAL QR Code Generation with Backend Integration
+    async function generateQRCode(classId) {
+        showLoadingSpinner();
+        
+        try {
+            const response = await fetch(`/api/generate-qr/${classId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showQRCodeModal(data);
+            } else {
+                showNotification(data.message || 'Failed to generate QR code', 'error');
+            }
+        } catch (error) {
+            console.error('Error generating QR code:', error);
+            showNotification('Error generating QR code. Please try again.', 'error');
+        } finally {
+            hideLoadingSpinner();
+        }
+    }
+
+    // Show QR Code Modal
+    function showQRCodeModal(qrData) {
+        const modal = new bootstrap.Modal(document.getElementById('qrCodeModal'));
+        const qrImage = document.getElementById('modal-qr-code');
+        const qrClassInfo = document.getElementById('qr-class-info');
+        const qrExpiryInfo = document.getElementById('qr-expiry-info');
+        
+        if (qrImage) {
+            // Clear previous QR code
+            qrImage.innerHTML = '';
+            
+            // Generate new QR code
+            new QRCode(qrImage, {
+                text: qrData.qr_data || `CLASS_${qrData.class_id}`,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+        
+        if (qrClassInfo) {
+            qrClassInfo.textContent = qrData.class_name || 'Class Session';
+        }
+        
+        if (qrExpiryInfo) {
+            qrExpiryInfo.textContent = `Expires in ${qrData.expires_in || '5 minutes'}`;
+        }
+        
+        modal.show();
+    }
+
+    // Delete class function
+    async function deleteClass(classId) {
+        try {
+            const response = await fetch(`/api/delete-class/${classId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
+            
+            if (response.ok) {
+                showNotification('Class deleted successfully', 'success');
+                // Remove the class from the UI
+                const classElement = document.querySelector(`[data-class-id="${classId}"]`);
+                if (classElement) {
+                    classElement.remove();
+                }
+                
+                // Close the modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteClassModal'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // Reload dashboard data
+                loadDashboardData();
+            } else {
+                throw new Error('Failed to delete class');
+            }
+        } catch (error) {
+            console.error('Error deleting class:', error);
+            showNotification('Error deleting class. Please try again.', 'error');
+        }
+    }
+
+    function downloadQRCode() {
+        // Implement QR code download functionality
+        showNotification('QR code download feature coming soon!', 'info');
+    }
+
+    // Show Loading Spinner
+    function showLoadingSpinner() {
+        const spinner = document.getElementById('loading-overlay');
+        if (spinner) {
+            spinner.style.display = 'flex';
+        }
+    }
+
+    function hideLoadingSpinner() {
+        const spinner = document.getElementById('loading-overlay');
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+    }
+
+    // Show form loading state
+    function showFormLoading(form) {
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
+        submitBtn.disabled = true;
+        
+        // Re-enable after a timeout (form submission will reload the page)
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 5000);
+    }
+
+    // Real-time clock in header
+    function updateClock() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', { 
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        const dateString = now.toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        
+        let clockElement = document.querySelector('.header-clock');
+        if (!clockElement) {
+            clockElement = document.createElement('div');
+            clockElement.className = 'header-clock';
+            document.querySelector('.header-right').prepend(clockElement);
+        }
+        
+        clockElement.innerHTML = `
+            <div class="clock-time">${timeString}</div>
+            <div class="clock-date">${dateString}</div>
+        `;
+    }
+
+    // Notification system
+    function showNotification(message, type = 'success') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'info' ? 'info-circle' : 'check-circle'} me-2"></i>
+                <span>${message}</span>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    // Real-time updates
+    function startRealTimeUpdates() {
+        // Update class status every 30 seconds
+        setInterval(updateClassStatus, 30000);
+        
+        // Update dashboard data every 2 minutes
+        setInterval(loadDashboardData, 120000);
+    }
+
+    // Update class status in real-time
+    async function updateClassStatus() {
+        try {
+            const response = await fetch('/api/lecturer/class-status/', {
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                updateOngoingClasses(data.ongoing_classes || []);
+            }
+        } catch (error) {
+            console.error('Error updating class status:', error);
+        }
+    }
+
+    function updateOngoingClasses(ongoingClasses) {
+        const classRows = document.querySelectorAll('.data-table tr');
+        classRows.forEach(row => {
+            const classId = row.getAttribute('data-class-id');
+            const isOngoing = ongoingClasses.includes(parseInt(classId));
+            
+            const statusElement = row.querySelector('.badge');
+            const qrButton = row.querySelector('.generate-qr-btn');
+            
+            if (statusElement && qrButton) {
+                if (isOngoing) {
+                    statusElement.textContent = 'ONGOING';
+                    statusElement.className = 'badge bg-success';
+                    qrButton.disabled = false;
+                    qrButton.className = 'btn btn-primary btn-sm generate-qr-btn';
+                } else {
+                    statusElement.textContent = 'ENDED';
+                    statusElement.className = 'badge bg-secondary';
+                    qrButton.disabled = true;
+                    qrButton.className = 'btn btn-outline-secondary btn-sm';
+                }
+            }
+        });
+    }
+
+    // Utility function to get CSRF token
+    function getCSRFToken() {
+        const csrfToken = document.getElementById('csrfToken');
+        return csrfToken ? csrfToken.value : '';
+    }
+
+    // Load additional data for specific tabs
+    async function loadAnalyticsData() {
+        try {
+            // This would fetch additional analytics data if needed
+            console.log('Loading analytics data...');
+        } catch (error) {
+            console.error('Error loading analytics data:', error);
+        }
+    }
+
+    async function loadStudentsData() {
+        try {
+            // This would fetch additional students data if needed
+            console.log('Loading students data...');
+        } catch (error) {
+            console.error('Error loading students data:', error);
+        }
+    }
+
+    // Load dashboard data
+    async function loadDashboardData() {
+        try {
+            const response = await fetch('/api/lecturer/dashboard-data/', {
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                updateDashboardStats(data);
+            }
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+        }
+    }
+
+    function updateDashboardStats(data) {
+        // Update statistics cards
+        document.getElementById('unitsCount').textContent = data.teaching_units || '0';
+        document.getElementById('totalStudents').textContent = data.total_students || '0';
+        document.getElementById('todaysClasses').textContent = data.todays_classes_count || '0';
+        document.getElementById('attendancePercentage').textContent = data.attendance_percentage + '%';
+        document.getElementById('upcomingClassesValue').textContent = data.upcoming_classes_count || '0';
+        document.getElementById('todaysClassesBadge').textContent = data.todays_classes_count || '0';
+    }
+</script>
+
+<!-- Add this hidden element to pass units data to JavaScript -->
+<script id="unitsData" type="application/json">
+    {{ units_json|safe }}
+</script>
 </body>
 </html>

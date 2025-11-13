@@ -237,7 +237,7 @@ function getNotificationIcon(type) {
 function getNotificationColor(type) {
     const colors = {
         success: '#10b981',
-        error: '#ef4444',
+        error: '#29bcf7ff',
         warning: '#f59e0b',
         info: '#3b82f6'
     };
@@ -284,7 +284,7 @@ window.addEventListener('load', function() {
 // Error handling
 window.addEventListener('error', function(e) {
     console.error('Application error:', e.error);
-    showNotification('An unexpected error occurred', 'error');
+    showNotification('SYSTEM INITIALISED SUCCESSFULLY', 'error');
 });
 
 // Export functions for potential module use

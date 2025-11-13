@@ -4,947 +4,1123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendify | Student Portal</title>
-    <link rel="stylesheet" href="{% static 'css/student.css' %}">
-    <link rel="icon" href="{% static 'images/attendify_logo.png' %}" type="image/x-icon">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Student Portal - Attendify</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- QR Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <link rel="icon" href="{% static 'images/attendify_logo.png' %}">
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{% static 'css/student.css' %}">
 </head>
 <body>
-    <!-- Professional Header -->
-    <header class="portal-header">
-        <div class="container-fluid">
-            <div class="header-content">
-                <div class="brand-section">
-                    <div class="logo-container">
-                        <div class="logo-icon">
-                            <i class="fas fa-graduation-cap"></i>
-                        </div>
-                        <div class="brand-text">
-                            <h1 class="brand-name">Attendify</h1>
-                            <span class="brand-subtitle">Student Portal</span>
-                        </div>
-                    </div>
+    <!-- Navigation Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-graduation-cap"></i>
                 </div>
-                
-                <div class="header-stats">
-                    <div class="stat-item">
-                        <div class="stat-value" id="header-present-count">{{ present_classes }}</div>
-                        <div class="stat-label">Present</div>
-                    </div>
-                    <div class="stat-divider"></div>
-                    <div class="stat-item">
-                        <div class="stat-value">{{ enrolled_units }}</div>
-                        <div class="stat-label">Units</div>
-                    </div>
-                    <div class="stat-divider"></div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="header-attendance-percentage">{{ attendance_percentage }}%</div>
-                        <div class="stat-label">Attendance</div>
-                    </div>
+                <div class="logo-text">Attendify</div>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <ul class="sidebar-nav">
+            <li class="nav-item active">
+                <a href="{% url 'student_dashboard' %}" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>My Schedule</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analytics</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">
+                    <i class="fas fa-book"></i>
+                    <span>Units</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link" id="settingsLink">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-avatar">
+                    {{ student.user.first_name|first }}{{ student.user.last_name|first }}
                 </div>
-                
-                <div class="user-section">
-                    <div class="user-avatar">
-                        {% if user.profile_picture %}
-                            <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}">
-                        {% else %}
-                            <img src="https://ui-avatars.com/api/?name={{ user.first_name|urlencode }}+{{ user.last_name|urlencode }}&background=4f46e5&color=fff&bold=true" alt="{{ user.get_full_name }}">
-                        {% endif %}
-                    </div>
-                    <div class="user-info">
-                        <div class="user-name">{{ user.first_name }} {{ user.last_name }}</div>
-                        <div class="user-id">{{ student.registration_number }}</div>
-                    </div>
-                    <div class="header-actions">
-                        <div class="dropdown">
-                            <button class="action-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="{% url 'student_dashboard' %}"><i class="fas fa-home me-2"></i>Dashboard</a></li>
-                                <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="fas fa-user me-2"></i>My Profile</a></li>
-                                <li><a class="dropdown-item" href="{% url 'profile_edit' %}"><i class="fas fa-edit me-2"></i>Edit Profile</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form action="{% url 'logout' %}" method="POST" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" class="dropdown-item text-danger">
-                                            <i class="fas fa-sign-out-alt me-2"></i>Logout
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
+                <div class="user-info">
+                    <div class="user-name">{{ student.user.get_full_name }}</div>
+                    <div class="user-role">Student</div>
                 </div>
             </div>
-        </div>
-    </header>
-
-    <!-- Floating Navigation Tabs -->
-    <nav class="floating-nav">
-        <div class="nav-container">
-            <button class="nav-btn active" data-tab="classes" title="Today's Classes">
-                <div class="nav-icon">
-                    <i class="fas fa-calendar-alt"></i>
-                </div>
-                <span class="nav-label">Classes</span>
-            </button>
-            
-            <button class="nav-btn" data-tab="attendance" title="QR Attendance">
-                <div class="nav-icon">
-                    <i class="fas fa-qrcode"></i>
-                </div>
-                <span class="nav-label">Attendance</span>
-            </button>
-            
-            <button class="nav-btn" data-tab="units" title="My Units">
-                <div class="nav-icon">
-                    <i class="fas fa-book"></i>
-                </div>
-                <span class="nav-label">Units</span>
-            </button>
-            
-            <button class="nav-btn" data-tab="analytics" title="Analytics">
-                <div class="nav-icon">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <span class="nav-label">Analytics</span>
-            </button>            
         </div>
     </nav>
 
     <!-- Main Content -->
-    <main class="portal-main">
-        <div class="container-fluid">
-            <!-- Welcome Section -->
-            <section class="welcome-section">
-                <div class="welcome-content">
-                    <h2 id="dynamic-greeting">Welcome back, {{ user.first_name }}</h2>
-                    <p>You have <strong id="todays-classes-count">{{ todays_classes.count }}</strong> classes today with <strong id="welcome-attendance-percentage">{{ attendance_percentage }}%</strong> overall attendance</p>
+    <main class="main-content">
+        <!-- Top Header -->
+        <header class="top-header">
+            <div class="header-left">
+                <h1 class="page-title">Student Dashboard</h1>
+                <div class="breadcrumb">
+                    <span>Home</span> / <span>Dashboard</span>
                 </div>
-                <div class="welcome-visual">
-                    <div class="visual-card">
-                        <div class="visual-icon">
-                            <i class="fas fa-user-graduate"></i>
-                        </div>
-                        <div class="visual-text">
-                            <span>Active Student</span>
-                            <small>Portal Access Granted</small>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- Tab Content Sections -->
-            
-            <!-- Classes Tab -->
-            <section class="tab-content active" id="classes-tab">
-                <div class="content-grid">
-                    <!-- Today's Classes Card -->
-                    <div class="content-card full-width">
-                        <div class="card-header p-3">
-                            <h3><i class="fas fa-calendar-day me-2"></i>Today's Classes</h3>
-                            <span class="card-badge">{{ todays_classes.count }} scheduled</span>
-                        </div>
-                        <div class="card-body">
-                            {% if todays_classes %}
-                                <div class="classes-list" id="todays-classes-list">
-                                    {% for class in todays_classes %}
-                                    <div class="class-card {% if class.display_status == 'ongoing' %}ongoing{% elif class.display_status == 'upcoming' %}upcoming{% else %}ended{% endif %}" 
-                                         data-class-id="{{ class.id }}"
-                                         data-status="{{ class.display_status }}"
-                                         data-start-time="{{ class.start_time|time:'H:i:s' }}"
-                                         data-end-time="{{ class.end_time|time:'H:i:s' }}"
-                                         data-schedule-date="{{ class.schedule_date|date:'Y-m-d' }}"
-                                         data-unit-code="{{ class.semester_unit.unit.code }}"
-                                         data-unit-name="{{ class.semester_unit.unit.name }}"
-                                         data-venue="{{ class.venue }}"
-                                         data-lecturer="Dr. {{ class.lecturer.user.last_name }}"
-                                         data-attendance-status="{{ class.attendance_status }}">
-                                        <div class="class-status-indicator"></div>
-                                        <div class="class-icon">
-                                            <i class="fas fa-{% if class.display_status == 'ongoing' %}play-circle{% elif class.display_status == 'upcoming' %}clock{% else %}check-circle{% endif %}"></i>
-                                        </div>
-                                        <div class="class-details">
-                                            <h4>{{ class.semester_unit.unit.name }}</h4>
-                                            <p class="class-meta">{{ class.semester_unit.unit.code }} | {{ class.venue }}</p>
-                                            <div class="class-info">
-                                                <span class="time">{{ class.start_time|time:"H:i" }} - {{ class.end_time|time:"H:i" }}</span>
-                                                <span class="lecturer">Dr. {{ class.lecturer.user.last_name }}</span>
-                                            </div>
-                                        </div>
-                                        <div class="class-actions">
-                                            {% if class.display_status == 'ongoing' %}
-                                                {% if class.attendance_marked %}
-                                                    <span class="status-badge success">{{ class.attendance_status }}</span>
-                                                    <button class="btn-success" disabled>
-                                                        <i class="fas fa-check"></i> Already Marked
-                                                    </button>
-                                                {% else %}
-                                                    <span class="status-badge live">Live</span>
-                                                    <button class="btn-primary scan-from-classes" data-class-id="{{ class.id }}">
-                                                        <i class="fas fa-qrcode"></i> Scan QR
-                                                    </button>
-                                                {% endif %}
-                                            
-                                            {% elif class.display_status == 'upcoming' %}
-                                                <span class="status-badge upcoming">Upcoming</span>
-                                                <div class="countdown-timer" id="countdown-{{ class.id }}"></div>
-                                            
-                                            {% else %} <!-- Ended class -->
-                                                {% if class.attendance_marked %}
-                                                    <span class="status-badge success">{{ class.attendance_status }}</span>
-                                                    <button class="btn-success" disabled>
-                                                        <i class="fas fa-check"></i> Attended
-                                                    </button>
-                                                {% else %}
-                                                    <span class="status-badge danger">Absent</span>
-                                                    <button class="btn-danger" disabled>
-                                                        <i class="fas fa-times"></i> Missed
-                                                    </button>
-                                                {% endif %}
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <div class="empty-state">
-                                    <i class="fas fa-calendar-times fa-3x"></i>
-                                    <h4>No classes scheduled for today</h4>
-                                    <p>Enjoy your day off or check upcoming classes</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <!-- Quick Stats Card -->
-                    <div class="content-card">
-                        <div class="card-header p-3">
-                            <h3><i class="fas fa-chart-bar me-2"></i>Quick Stats</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="stats-grid">
-                                <div class="stat-card">
-                                    <div class="stat-icon primary">
-                                        <i class="fas fa-calendar-check"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-value" id="stats-total-classes">{{ total_classes }}</div>
-                                        <div class="stat-label">Total Classes</div>
-                                    </div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon success">
-                                        <i class="fas fa-user-check"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-value" id="stats-present-classes">{{ present_classes }}</div>
-                                        <div class="stat-label">Present</div>
-                                    </div>
-                                </div>
-                                <div class="stat-card">
-                                    <div class="stat-icon info">
-                                        <i class="fas fa-chart-pie"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-value" id="stats-attendance-percentage">{{ attendance_percentage }}%</div>
-                                        <div class="stat-label">Rate</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Upcoming Classes Card -->
-                    <div class="content-card">
-                        <div class="card-header p-3">
-                            <h3><i class="fas fa-calendar-week me-2"></i>Upcoming Classes</h3>
-                            <span class="card-badge">{{ upcoming_classes.count }} classes</span>
-                        </div>
-                        <div class="card-body">
-                            {% if upcoming_classes %}
-                                <div class="compact-list">
-                                    {% for class in upcoming_classes|slice:":5" %}
-                                    <div class="compact-item">
-                                        <div class="item-main">
-                                            <strong>{{ class.semester_unit.unit.code }}</strong>
-                                            <span>{{ class.schedule_date|date:"D, M d" }}</span>
-                                        </div>
-                                        <div class="item-meta">
-                                            {{ class.start_time|time:"H:i" }} | {{ class.venue }}
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                    {% if upcoming_classes.count > 5 %}
-                                    <div class="compact-item view-more">
-                                        <a href="javascript:void(0)" onclick="showTab('units')">View all upcoming classes</a>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            {% else %}
-                                <div class="empty-state small">
-                                    <i class="fas fa-wind"></i>
-                                    <p>No upcoming classes</p>
-                                </div>
-                            {% endif %}
-                        </div>
+            </div>
+            <div class="header-right">
+                <div class="header-actions">
+                    <button class="header-btn" id="notificationsBtn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <button class="header-btn" id="quickScanBtn">
+                        <i class="fas fa-qrcode"></i>
+                        Quick Scan
+                    </button>
+                    <div class="current-time" id="currentTime">
+                        <i class="fas fa-clock"></i>
+                        <span id="timeDisplay">Loading...</span>
                     </div>
                 </div>
-            </section>
-            
-            <!-- Attendance Tab -->
-            <section class="tab-content" id="attendance-tab">
-                <div class="content-grid">
-                    <!-- QR Scanner Card -->
-                    <div class="content-card full-width">
-                        <div class="card-header p-3">
-                            <h3><i class="fas fa-qrcode me-2"></i>QR Attendance System</h3>
-                            <span class="card-badge">Live</span>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="scanner-layout">
-                                <div class="scanner-content">
-                                    <h4>Real-time QR Scanning</h4>
-                                    <p>Scan your lecturer's QR code to mark attendance automatically. System validates location and timing.</p>
-                                    
-                                    <!-- Ongoing Classes for QR Scanning -->
-                                    <div class="ongoing-classes-section">
-                                        <h5>Available for Scanning:</h5>
-                                        <div id="ongoing-classes-list" class="ongoing-classes-list">
-                                            {% for class in ongoing_classes %}
-                                            <div class="ongoing-class-item {% if class.id in attended_class_ids %}attendance-marked{% endif %}" 
-                                                 data-class-id="{{ class.id }}"
-                                                 data-unit-code="{{ class.semester_unit.unit.code }}"
-                                                 data-unit-name="{{ class.semester_unit.unit.name }}"
-                                                 data-start-time="{{ class.start_time|time:'H:i:s' }}"
-                                                 data-end-time="{{ class.end_time|time:'H:i:s' }}"
-                                                 data-schedule-date="{{ class.schedule_date|date:'Y-m-d' }}"
-                                                 data-venue="{{ class.venue }}"
-                                                 data-lecturer="Dr. {{ class.lecturer.user.last_name }}">
-                                                <div class="class-info">
-                                                    <strong>{{ class.semester_unit.unit.code }}</strong>
-                                                    <span>{{ class.semester_unit.unit.name }}</span>
-                                                    <small>{{ class.start_time|time:"H:i" }} - {{ class.end_time|time:"H:i" }} | {{ class.venue }}</small>
-                                                    {% if class.id in attended_class_ids %}
-                                                    <div class="attendance-marked-badge">
-                                                        <i class="fas fa-check-circle"></i> Attendance Marked
-                                                    </div>
-                                                    {% else %}
-                                                    <div class="time-remaining-badge" id="time-remaining-{{ class.id }}">
-                                                        <i class="fas fa-clock"></i>
-                                                        <span>Calculating...</span>
-                                                    </div>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="class-action">
-                                                    {% if class.id in attended_class_ids %}
-                                                        <button class="btn-success small" disabled>
-                                                            <i class="fas fa-check"></i> Marked
-                                                        </button>
-                                                    {% else %}
-                                                        <button class="btn-primary small select-class-btn">Select</button>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            {% empty %}
-                                            <div class="empty-state small">
-                                                <i class="fas fa-clock"></i>
-                                                <p>No ongoing classes available for scanning</p>
-                                                <small>Classes must be currently in session to mark attendance</small>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
+            </div>
+        </header>
 
-                                    <div class="scanner-interface" id="qr-scanner">
-                                        <div class="scanner-frame">
-                                            <div class="scanner-overlay">
-                                                <div class="scanner-laser"></div>
-                                            </div>
-                                            <video id="qr-video" class="scanner-video" playsinline></video>
-                                            <canvas id="qr-canvas" class="scanner-canvas"></canvas>
-                                            <div class="scanner-placeholder" id="scanner-placeholder">
-                                                <i class="fas fa-camera fa-3x"></i>
-                                                <p>Camera preview will appear here</p>
-                                                <small>Select a class and start scanning</small>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="scanner-controls">
-                                            <button class="btn-primary" id="start-scanner">
-                                                <i class="fas fa-camera"></i>
-                                                Start Camera Scan
-                                            </button>
-                                            <button class="btn-secondary" id="upload-qr">
-                                                <i class="fas fa-upload"></i>
-                                                Upload QR Image
-                                            </button>
-                                            <input type="file" id="qr-file-input" accept="image/*" style="display: none;">
-                                            <button class="btn-outline" id="stop-scanner" style="display: none;">
-                                                <i class="fas fa-stop"></i>
-                                                Stop Scanner
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- Manual QR Token Input -->
-                                    <div class="manual-qr-input">
-                                        <h4>Or Enter Token Manually</h4>
-                                        <form id="qr-token-form">
-                                            {% csrf_token %}
-                                            <div class="form-group">
-                                                <input 
-                                                    type="text" 
-                                                    id="qr-token-input" 
-                                                    name="qr_token" 
-                                                    class="form-input" 
-                                                    placeholder="Enter QR Token (usually 32+ characters)" 
-                                                    required
-                                                    disabled
-                                                    pattern=".{10,}"
-                                                    title="QR token should be at least 10 characters"
-                                                >
-                                                <div class="input-status" id="token-input-status">
-                                                    <i class="fas fa-info-circle"></i>
-                                                    <span>Select a class first</span>
-                                                </div>
-                                            </div>
-                                            <button type="submit" class="btn-success" id="submit-token-btn" disabled>
-                                                <i class="fas fa-key"></i> Submit Token
-                                            </button>
-                                        </form>
-                                        <div id="qr-token-status" class="status-indicator"></div>
-                                    </div>
-
-                                    <div class="scanner-status" id="scanner-status">
-                                        <div class="status-indicator">
-                                            <i class="fas fa-circle"></i>
-                                            <span>Select a class to begin scanning</span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Scan Results -->
-                                    <div class="scan-results" id="scan-results" style="display: none;">
-                                        <h4>Scan Result</h4>
-                                        <div class="result-card" id="result-card">
-                                            <!-- Dynamic content will be loaded here -->
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="scanner-sidebar">
-                                    <h4>Scanning Protocol</h4>
-                                    <div class="protocol-steps">
-                                        <div class="protocol-step">
-                                            <div class="step-number">1</div>
-                                            <div class="step-content">
-                                                <strong>Select Ongoing Class</strong>
-                                                <p>Choose from available live classes above</p>
-                                            </div>
-                                        </div>
-                                        <div class="protocol-step">
-                                            <div class="step-number">2</div>
-                                            <div class="step-content">
-                                                <strong>Position QR Code</strong>
-                                                <p>Ensure QR code is clearly visible in camera</p>
-                                            </div>
-                                        </div>
-                                        <div class="protocol-step">
-                                            <div class="step-number">3</div>
-                                            <div class="step-content">
-                                                <strong>Auto-Capture</strong>
-                                                <p>System automatically detects and scans QR code</p>
-                                            </div>
-                                        </div>
-                                        <div class="protocol-step">
-                                            <div class="step-number">4</div>
-                                            <div class="step-content">
-                                                <strong>Location Validation</strong>
-                                                <p>GPS coordinates verified against class location</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="security-features">
-                                        <h5>Security Features</h5>
-                                        <div class="security-tags">
-                                            <span class="security-tag">Token Expiry</span>
-                                            <span class="security-tag">GPS Validation</span>
-                                            <span class="security-tag">Time Window</span>
-                                            <span class="security-tag">Single Use</span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Selected Class Info -->
-                                    <div class="selected-class-info" id="selected-class-info" style="display: none;">
-                                        <h5>Selected Class:</h5>
-                                        <div class="class-details">
-                                            <div id="selected-class-name" class="class-name"></div>
-                                            <div id="selected-class-time" class="class-time"></div>
-                                            <div id="selected-class-venue" class="class-venue"></div>
-                                            <div id="selected-class-lecturer" class="class-lecturer"></div>
-                                            <div class="time-remaining" id="time-remaining">
-                                                <i class="fas fa-clock"></i>
-                                                <span id="remaining-time-text"></span>
-                                            </div>
-                                        </div>
-                                        <button class="btn-outline small" id="change-class-btn" style="margin-top: 10px;">
-                                            <i class="fas fa-times"></i> Change Class
-                                        </button>
-                                    </div>
-
-                                    <!-- Location Status -->
-                                    <div class="location-status" id="location-status">
-                                        <h5>Location Services</h5>
-                                        <div class="status-indicator">
-                                            <i class="fas fa-map-marker-alt"></i>
-                                            <span id="location-status-text">Location access required for validation</span>
-                                        </div>
-                                        <small>Your location helps verify you're in the correct classroom</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        <!-- Stats Overview -->
+        <section class="stats-overview">
+            <div class="stat-card primary">
+                <div class="stat-icon">
+                    <i class="fas fa-percentage"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-value">{{ attendance_percentage }}%</h3>
+                    <p class="stat-label">Overall Attendance</p>
+                    <div class="stat-trend positive">
+                        <i class="fas fa-arrow-up"></i>
+                        5.2% this month
                     </div>
+                </div>
+            </div>
+            
+            <div class="stat-card success">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-value">{{ present_count }}</h3>
+                    <p class="stat-label">Classes Attended</p>
+                    <div class="stat-trend positive">
+                        <i class="fas fa-arrow-up"></i>
+                        3 this week
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card warning">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-value">{{ upcoming_classes }}</h3>
+                    <p class="stat-label">Upcoming Classes</p>
+                    <div class="stat-trend">
+                        Next: Today 2:00 PM
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card danger">
+                <div class="stat-icon">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 class="stat-value">{{ absent_count }}</h3>
+                    <p class="stat-label">Absences</p>
+                    <div class="stat-trend negative">
+                        <i class="fas fa-arrow-down"></i>
+                        2 this month
+                    </div>
+                </div>
+            </div>
+        </section>
 
-                    <!-- Recent Attendance Card -->
-                    <div class="content-card">
-                        <div class="card-header p-3">
-                            <h3><i class="fas fa-history me-2"></i>Recent Scans</h3>
-                            <button class="btn-icon" id="refresh-recent-attendance">
+        <!-- Main Dashboard Grid -->
+        <div class="dashboard-grid">
+            <!-- Left Column -->
+            <div class="dashboard-column">
+                <!-- Quick Attendance Card -->
+                <div class="card quick-attendance">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-fingerprint"></i>
+                            Mark Attendance
+                        </h2>
+                        <div class="card-actions">
+                            <button class="action-btn" id="refreshClasses">
                                 <i class="fas fa-sync-alt"></i>
                             </button>
                         </div>
-                        <div class="card-body">
-                            <div id="recent-attendance-content">
-                                {% if recent_attendances %}
-                                    <div class="attendance-history">
-                                        {% for attendance in recent_attendances %}
-                                        <div class="attendance-item {% if attendance.status == 'PRESENT' %}present{% elif attendance.status == 'LATE' %}late{% else %}absent{% endif %}">
-                                            <div class="attendance-icon">
-                                                <i class="fas fa-{% if attendance.status == 'PRESENT' %}check-circle{% elif attendance.status == 'LATE' %}clock{% else %}times-circle{% endif %}"></i>
-                                            </div>
-                                            <div class="attendance-info">
-                                                <strong>{{ attendance.class_schedule.semester_unit.unit.code }}</strong>
-                                                <span>{{ attendance.class_schedule.schedule_date|date:"M d" }}</span>
-                                                <small>{{ attendance.class_schedule.semester_unit.unit.name }}</small>
-                                            </div>
-                                            <div class="attendance-status">
-                                                <span class="status-badge {{ attendance.status|lower }}">{{ attendance.status }}</span>
-                                                {% if attendance.scan_time %}
-                                                    <small>{{ attendance.scan_time|time:"H:i" }}</small>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    <div class="empty-state small">
-                                        <i class="fas fa-ban"></i>
-                                        <p>No attendance records</p>
-                                        <small>Scan a QR code to mark your first attendance</small>
-                                    </div>
-                                {% endif %}
+                    </div>
+                    
+                    <div class="class-selector-container">
+                        <select class="class-selector" id="classSelector">
+                            <option value="" disabled selected>Select ongoing class</option>
+                            {% for class in ongoing_classes %}
+                                <option value="{{ class.id }}" data-lat="{{ class.latitude|default:0 }}" data-lng="{{ class.longitude|default:0 }}">
+                                    {{ class.semester_unit.unit.code }} - {{ class.semester_unit.unit.name }} ({{ class.start_time }} - {{ class.end_time }})
+                                </option>
+                            {% empty %}
+                                <option value="" disabled>No ongoing classes</option>
+                            {% endfor %}
+                        </select>
+                        <div class="selector-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="attendance-methods">
+                        <div class="method-tabs">
+                            <div class="method-tab active" data-method="scan">
+                                <div class="tab-icon">
+                                    <i class="fas fa-qrcode"></i>
+                                </div>
+                                <span>QR Scan</span>
+                            </div>
+                            <div class="method-tab" data-method="manual">
+                                <div class="tab-icon">
+                                    <i class="fas fa-keyboard"></i>
+                                </div>
+                                <span>Manual Code</span>
+                            </div>
+                            <div class="method-tab" data-method="location">
+                                <div class="tab-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <span>Location</span>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- Units Tab -->
-            <section class="tab-content" id="units-tab">
-                <div class="content-grid">
-                    <!-- My Units Card -->
-                    <div class="content-card full-width">
-                        <div class="card-header p-3">
-                            <h3><i class="fas fa-book me-2"></i>Enrolled Units</h3>
-                            <span class="card-badge">{{ unit_enrollments.count }} active</span>
-                        </div>
-                        <div class="card-body">
-                            {% if unit_enrollments %}
-                                <div class="units-grid">
-                                    {% for enrollment in unit_enrollments %}
-                                    <div class="unit-card">
-                                        <div class="unit-header">
-                                            <h4>{{ enrollment.semester_unit.unit.code }}</h4>
-                                            <span class="unit-credits">{{ enrollment.semester_unit.unit.credit_hours }} credits</span>
-                                        </div>
-                                        <div class="unit-body">
-                                            <h5>{{ enrollment.semester_unit.unit.name }}</h5>
-                                            <div class="unit-meta">
-                                                <div class="meta-item">
-                                                    <i class="fas fa-user-tie"></i>
-                                                    <span>Dr. {{ enrollment.semester_unit.lecturer.user.last_name }}</span>
-                                                </div>
-                                                <div class="meta-item">
-                                                    <i class="fas fa-calendar"></i>
-                                                    <span>{{ enrollment.semester_unit.semester.name }}</span>
-                                                </div>
-                                                <div class="meta-item">
-                                                    <i class="fas fa-chart-bar"></i>
-                                                    <span>Attendance: {{ enrollment.attendance_percentage }}%</span>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Unit Progress -->
-                                            <div class="unit-progress">
-                                                <div class="progress-info">
-                                                    <span>Attendance Progress</span>
-                                                    <span>{{ enrollment.attendance_percentage }}%</span>
-                                                </div>
-                                                <div class="progress-bar">
-                                                    <div class="progress-fill" style="width: {{ enrollment.attendance_percentage }}%"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="unit-actions">
-                                            <button class="btn-outline view-unit-details" data-unit-id="{{ enrollment.semester_unit.id }}">
-                                                <i class="fas fa-chart-bar me-1"></i> View Analytics
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
+                        
+                        <div class="method-content active" id="scan-method">
+                            <div class="qr-scanner-container">
+                                <div id="my-qr-reader" class="qr-reader"></div>
+                                <div class="scanner-instructions">
+                                    <p><i class="fas fa-info-circle"></i> Position QR code within frame to scan automatically</p>
                                 </div>
-                            {% else %}
-                                <div class="empty-state">
-                                    <i class="fas fa-book fa-3x"></i>
-                                    <h4>No units enrolled</h4>
-                                    <p>Contact your administrator for unit enrollment</p>
-                                </div>
-                            {% endif %}
+                            </div>
                         </div>
-                    </div>
-
-                    <!-- Unit Details Card -->
-                    <div class="content-card full-width p-5" id="unit-details-card" style="display: none;">
-                        <div class="card-header">
-                            <h3><i class="fas fa-analytics me-2"></i>Unit Analytics</h3>
-                            <button class="btn-icon" onclick="hideUnitDetails()">
-                                <i class="fas fa-times"></i>
+                        
+                        <div class="method-content" id="manual-method">
+                            <div class="input-group">
+                                <label class="input-label">Enter Attendance Token</label>
+                                <input type="text" class="input-field" id="tokenInput" placeholder="e.g., MATH101-5A2B9C-X7Y3Z">
+                            </div>
+                            <button class="btn btn-primary btn-block" id="submit-token">
+                                <i class="fas fa-check-circle"></i> Submit Token
                             </button>
                         </div>
-                        <div class="card-body" id="unit-details-content">
-                            <!-- Dynamic content will be loaded by JavaScript -->
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- Analytics Tab -->
-            <section class="tab-content" id="analytics-tab">
-                <div class="content-grid">
-                    <!-- Attendance Overview Card -->
-                    <div class="content-card">
-                        <div class="card-header p-3">
-                            <h3><i class="fas fa-chart-pie me-2"></i>Attendance Overview</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="analytics-main">
-                                <div class="attendance-circle">
-                                    <div class="circle-progress" data-percentage="{{ attendance_percentage }}">
-                                        <div class="circle-inner">
-                                            <span class="percentage" id="analytics-percentage">{{ attendance_percentage }}%</span>
-                                            <span class="label">Overall</span>
-                                        </div>
-                                    </div>
+                        
+                        <div class="method-content" id="location-method">
+                            <div class="location-info">
+                                <div class="location-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
                                 </div>
-                                <div class="attendance-breakdown">
-                                    <div class="breakdown-item">
-                                        <span class="label">Present</span>
-                                        <span class="value" id="analytics-present">{{ present_classes }}</span>
-                                    </div>
-                                    <div class="breakdown-item">
-                                        <span class="label">Late</span>
-                                        <span class="value" id="analytics-late">{{ late_count|default:0 }}</span>
-                                    </div>
-                                    <div class="breakdown-item">
-                                        <span class="label">Absent</span>
-                                        <span class="value" id="analytics-absent">{{ absent_count|default:0 }}</span>
-                                    </div>
-                                    <div class="breakdown-item">
-                                        <span class="label">Total</span>
-                                        <span class="value" id="analytics-total">{{ total_classes }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Performance Trends Card -->
-                    <div class="content-card">
-                        <div class="card-header p-3">
-                            <h3><i class="fas fa-chart-line me-2"></i>Weekly Trend</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="trend-chart">
-                                <canvas id="attendance-trend-chart" width="400" height="200"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Attendance History Card -->
-                    <div class="content-card full-width">
-                        <div class="card-header p-3">
-                            <h3><i class="fas fa-history me-2"></i>Attendance History</h3>
-                            <div class="header-actions">
-                                <button class="btn-outline" id="export-csv">
-                                    <i class="fas fa-download me-1"></i> Export CSV
+                                <h4>Location-based Attendance</h4>
+                                <p>Automatically mark attendance when you're near the classroom</p>
+                                <button class="btn btn-outline" id="enableLocation">
+                                    <i class="fas fa-location-arrow"></i> Enable Location
                                 </button>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <div class="attendance-table-container">
-                                <div class="table-responsive">
-                                    <table class="attendance-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Date</th>
-                                                <th>Unit</th>
-                                                <th>Lecturer</th>
-                                                <th>Status</th>
-                                                <th>Time</th>
-                                                <th>Venue</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="attendance-table-body">
-                                            {% for attendance in attendances|slice:":20" %}
-                                            <tr>
-                                                <td>
-                                                    {% if attendance.scan_time %}
-                                                        {{ attendance.scan_time|date:"M d, Y" }}
-                                                    {% else %}
-                                                        {{ attendance.class_schedule.schedule_date|date:"M d, Y" }}
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    <strong>{{ attendance.class_schedule.semester_unit.unit.code }}</strong>
-                                                    <br>
-                                                    <small>{{ attendance.class_schedule.semester_unit.unit.name }}</small>
-                                                </td>
-                                                <td>Dr. {{ attendance.class_schedule.lecturer.user.last_name }}</td>
-                                                <td>
-                                                    <span class="status-indicator {{ attendance.status|lower }}">
-                                                        {{ attendance.status }}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    {% if attendance.scan_time %}
-                                                        {{ attendance.scan_time|time:"H:i" }}
-                                                    {% else %}
-                                                        -
-                                                    {% endif %}
-                                                </td>
-                                                <td>{{ attendance.class_schedule.venue }}</td>
-                                            </tr>
-                                            {% empty %}
-                                            <tr>
-                                                <td colspan="6" class="text-center py-4">
-                                                    <div class="empty-state small">
-                                                        <i class="fas fa-ban"></i>
-                                                        <p>No attendance records found</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
+                    </div>
+                </div>
+
+                <!-- Today's Schedule -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-calendar-day"></i>
+                            Today's Schedule
+                        </h2>
+                        <span class="card-badge">{{ todays_classes|length }} classes</span>
+                    </div>
+                    <div class="schedule-list">
+                        {% for class in todays_classes %}
+                        <div class="schedule-item {% if class.is_ongoing %}ongoing{% endif %}" data-class-id="{{ class.id }}">
+                            <div class="schedule-time">
+                                <div class="time-start">{{ class.start_time }}</div>
+                                <div class="time-end">{{ class.end_time }}</div>
+                            </div>
+                            <div class="schedule-details">
+                                <h4 class="class-name">{{ class.semester_unit.unit.code }}</h4>
+                                <p class="class-title">{{ class.semester_unit.unit.name }}</p>
+                                <div class="class-meta">
+                                    <span class="meta-item">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        {{ class.venue }}
+                                    </span>
+                                    <span class="meta-item">
+                                        <i class="fas fa-user-tie"></i>
+                                        Dr. {{ class.lecturer.user.last_name }}
+                                    </span>
                                 </div>
-                                {% if attendances.count > 20 %}
-                                <div class="table-footer">
-                                    <button class="btn-outline" id="load-more-attendance">
-                                        <i class="fas fa-plus me-1"></i> Load More
-                                    </button>
+                            </div>
+                            <div class="schedule-status">
+                                <div class="attendance-status status-{{ class.attendance_status|lower }}">
+                                    {% if class.attendance_marked %}
+                                        {{ class.attendance_status }}
+                                    {% else %}
+                                        {{ class.display_status|upper }}
+                                    {% endif %}
+                                </div>
+                                {% if class.is_ongoing %}
+                                <div class="live-indicator">
+                                    <span class="pulse-dot"></span>
+                                    LIVE
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="empty-state">
+                            <i class="fas fa-calendar-times"></i>
+                            <p>No classes scheduled for today</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="dashboard-column">
+                <!-- Analytics Charts -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-chart-line"></i>
+                            Attendance Analytics
+                        </h2>
+                        <div class="chart-controls">
+                            <select class="chart-period" id="chartPeriod">
+                                <option value="week">This Week</option>
+                                <option value="month" selected>This Month</option>
+                                <option value="semester">This Semester</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="attendanceChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Attendance Distribution -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-chart-pie"></i>
+                            Attendance Distribution
+                        </h2>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="attendancePieChart"></canvas>
+                    </div>
+                    <div class="pie-legend" id="pieLegend"></div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-history"></i>
+                            Recent Activity
+                        </h2>
+                    </div>
+                    <div class="activity-feed">
+                        {% for attendance in recent_attendances %}
+                        <div class="activity-item">
+                            <div class="activity-icon status-{{ attendance.status|lower }}">
+                                <i class="fas fa-{% if attendance.status == 'PRESENT' %}check{% else %}times{% endif %}-circle"></i>
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-title">
+                                    Marked {{ attendance.status }} for {{ attendance.class_schedule.semester_unit.unit.code }}
+                                </div>
+                                <div class="activity-meta">
+                                    <i class="far fa-clock"></i>
+                                    {{ attendance.scan_time|time }} • {{ attendance.class_schedule.schedule_date }}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-list"></i>
+                            <p>No recent activity</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enrolled Units Section -->
+        <section class="units-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-book"></i>
+                    Enrolled Units
+                </h2>
+                <button class="btn btn-outline" id="viewAllUnits">
+                    View All Units
+                </button>
+            </div>
+            <div class="units-grid">
+                {% for enrollment in unit_enrollments %}
+                <div class="unit-card">
+                    <div class="unit-header">
+                        <div class="unit-badge">
+                            <span class="unit-code">{{ enrollment.semester_unit.unit.code }}</span>
+                            <span class="unit-credits">{{ enrollment.semester_unit.unit.credit_hours }} Credits</span>
+                        </div>
+                        <div class="unit-actions">
+                            <button class="icon-btn" title="View Details">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <h3 class="unit-name">{{ enrollment.semester_unit.unit.name }}</h3>
+                    <div class="unit-details">
+                        <div class="unit-detail">
+                            <i class="fas fa-user-tie"></i>
+                            <span>Dr. {{ enrollment.semester_unit.lecturer.user.last_name }}</span>
+                        </div>
+                        <div class="unit-detail">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>{{ enrollment.semester_unit.semester.name }}</span>
+                        </div>
+                    </div>
+                    <div class="unit-progress">
+                        <div class="progress-header">
+                            <span>Attendance</span>
+                            <span class="progress-percentage">{{ enrollment.attendance_percentage }}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ enrollment.attendance_percentage }}%"></div>
+                        </div>
+                        <div class="progress-stats">
+                            <span>{{ enrollment.attended_classes }} of {{ enrollment.total_classes }} classes</span>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="fas fa-book"></i>
+                    <p>No units enrolled</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+    <!-- Profile Settings Modal -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal profile-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-edit"></i> Profile Settings</h3>
+                <button class="close-modal" id="closeProfileModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="profileForm" method="POST" action="{% url 'profile_edit' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Profile Picture Section -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-camera"></i>
+                            Profile Picture
+                        </h4>
+                        <div class="profile-picture-section">
+                            <div class="current-avatar">
+                                {% if student.user.profile_picture %}
+                                    <img src="{{ student.user.profile_picture.url }}" alt="Profile Picture" class="profile-avatar">
+                                {% else %}
+                                    <div class="profile-avatar-placeholder">
+                                        {{ student.user.first_name|first }}{{ student.user.last_name|first }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="avatar-upload">
+                                <label class="file-upload-btn">
+                                    <i class="fas fa-upload"></i>
+                                    Upload New Photo
+                                    <input type="file" name="profile_picture" accept="image/*" class="file-input">
+                                </label>
+                                <small class="file-hint">JPG, PNG or GIF. Max 5MB.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Information Section -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-user"></i>
+                            Personal Information
+                        </h4>
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label class="input-label">First Name *</label>
+                                <input type="text" 
+                                       name="first_name" 
+                                       class="input-field" 
+                                       value="{{ student.user.first_name }}"
+                                       required>
+                                {% if user_form.first_name.errors %}
+                                <div class="error-message">
+                                    {{ user_form.first_name.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="input-group">
+                                <label class="input-label">Last Name *</label>
+                                <input type="text" 
+                                       name="last_name" 
+                                       class="input-field" 
+                                       value="{{ student.user.last_name }}"
+                                       required>
+                                {% if user_form.last_name.errors %}
+                                <div class="error-message">
+                                    {{ user_form.last_name.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="input-group">
+                                <label class="input-label">Email Address *</label>
+                                <input type="email" 
+                                       name="email" 
+                                       class="input-field" 
+                                       value="{{ student.user.email }}"
+                                       required>
+                                {% if user_form.email.errors %}
+                                <div class="error-message">
+                                    {{ user_form.email.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="input-group">
+                                <label class="input-label">Phone Number</label>
+                                <input type="tel" 
+                                       name="phone_number" 
+                                       class="input-field" 
+                                       value="{{ student.user.phone_number|default:'' }}"
+                                       placeholder="+254 XXX XXX XXX">
+                                {% if user_form.phone_number.errors %}
+                                <div class="error-message">
+                                    {{ user_form.phone_number.errors }}
                                 </div>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
-            
 
-                    <!-- Academic Stats Card -->
-                    <div class="content-card">
-                        <div class="card-header p-3">
-                            <h3><i class="fas fa-graduation-cap me-2"></i>Academic Statistics</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="academic-stats">
-                                <div class="academic-stat">
-                                    <div class="stat-icon primary">
-                                        <i class="fas fa-book"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-value">{{ enrolled_units }}</div>
-                                        <div class="stat-label">Enrolled Units</div>
-                                    </div>
+                    <!-- Student Information Section -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-graduation-cap"></i>
+                            Student Information
+                        </h4>
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label class="input-label">Registration Number</label>
+                                <input type="text" 
+                                       class="input-field" 
+                                       value="{{ student.registration_number }}"
+                                       disabled
+                                       style="background-color: #f8f9fa;">
+                                <small class="field-hint">Registration number cannot be changed</small>
+                            </div>
+                            
+                            <div class="input-group">
+                                <label class="input-label">Course</label>
+                                <input type="text" 
+                                       class="input-field" 
+                                       value="{{ student.course.name|default:'Not assigned' }}"
+                                       disabled
+                                       style="background-color: #f8f9fa;">
+                            </div>
+                            
+                            <div class="input-group">
+                                <label class="input-label">Department</label>
+                                <input type="text" 
+                                       class="input-field" 
+                                       value="{{ student.department.name|default:'Not assigned' }}"
+                                       disabled
+                                       style="background-color: #f8f9fa;">
+                            </div>
+                            
+                            <div class="input-group">
+                                <label class="input-label">Year of Study</label>
+                                <select name="year_of_study" class="input-field">
+                                    <option value="1" {% if student.year_of_study == 1 %}selected{% endif %}>Year 1</option>
+                                    <option value="2" {% if student.year_of_study == 2 %}selected{% endif %}>Year 2</option>
+                                    <option value="3" {% if student.year_of_study == 3 %}selected{% endif %}>Year 3</option>
+                                    <option value="4" {% if student.year_of_study == 4 %}selected{% endif %}>Year 4</option>
+                                    <option value="5" {% if student.year_of_study == 5 %}selected{% endif %}>Year 5</option>
+                                </select>
+                                {% if profile_form.year_of_study.errors %}
+                                <div class="error-message">
+                                    {{ profile_form.year_of_study.errors }}
                                 </div>
-                                <div class="academic-stat">
-                                    <div class="stat-icon success">
-                                        <i class="fas fa-calendar-check"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-value">{{ attendance_percentage }}%</div>
-                                        <div class="stat-label">Attendance Rate</div>
-                                    </div>
-                                </div>
-                                <div class="academic-stat">
-                                    <div class="stat-icon info">
-                                        <i class="fas fa-clock"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <div class="stat-value">{{ present_classes }}/{{ total_classes }}</div>
-                                        <div class="stat-label">Classes Attended</div>
-                                    </div>
-                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
-        </div>
-    </main>
 
-    <!-- System Notifications Container -->
-    <div id="notifications-container" class="notifications-container"></div>
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="loading-spinner"></div>
-        <p>Processing your request...</p>
-    </div>
-
-    <!-- Location Permission Modal -->
-    <div class="modal fade" id="locationPermissionModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-map-marker-alt me-2"></i>Location Access Required
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Attendify needs access to your location to verify you're in the correct classroom for attendance marking.</p>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Why we need location:</strong> Prevents remote attendance fraud and ensures you're physically present in class.
+                    <!-- Contact Information Section -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-address-card"></i>
+                            Contact Information
+                        </h4>
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label class="input-label">Address</label>
+                                <textarea name="address" 
+                                          class="input-field" 
+                                          rows="3" 
+                                          placeholder="Enter your current address">{{ student.address|default:'' }}</textarea>
+                                {% if profile_form.address.errors %}
+                                <div class="error-message">
+                                    {{ profile_form.address.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="input-group">
+                                <label class="input-label">Emergency Contact</label>
+                                <input type="text" 
+                                       name="emergency_contact" 
+                                       class="input-field" 
+                                       value="{{ student.emergency_contact|default:'' }}"
+                                       placeholder="Emergency contact person name">
+                                {% if profile_form.emergency_contact.errors %}
+                                <div class="error-message">
+                                    {{ profile_form.emergency_contact.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="input-group">
+                                <label class="input-label">Emergency Phone</label>
+                                <input type="tel" 
+                                       name="emergency_phone" 
+                                       class="input-field" 
+                                       value="{{ student.emergency_phone|default:'' }}"
+                                       placeholder="Emergency contact phone number">
+                                {% if profile_form.emergency_phone.errors %}
+                                <div class="error-message">
+                                    {{ profile_form.emergency_phone.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
-                    <p>Your location data is only used for attendance validation and is not stored permanently.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="enable-location-btn">
-                        <i class="fas fa-check me-2"></i>Enable Location
-                    </button>
-                </div>
+
+                    <!-- Form Actions -->
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelProfile">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="saveProfile">
+                            <i class="fas fa-save"></i>
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
-    <!-- Camera Permission Modal -->
-    <div class="modal fade" id="cameraPermissionModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-camera me-2"></i>Camera Access Required
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Attendify needs access to your camera to scan QR codes for attendance marking.</p>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>How it works:</strong> Point your camera at the QR code displayed by your lecturer. The system will automatically detect and scan it.
-                    </div>
-                    <p>Camera access is only used for QR scanning and is not recorded or stored.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="enable-camera-btn">
-                        <i class="fas fa-check me-2"></i>Enable Camera
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="portal-footer">
-        <div class="container-fluid">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <div class="logo-container small">
-                        <div class="logo-icon">
-                            <i class="fas fa-graduation-cap"></i>
-                        </div>
-                        <div class="brand-text">
-                            <h3 class="brand-name">Attendify</h3>
-                            <span class="brand-subtitle">Student Portal</span>
-                        </div>
-                    </div>
-                    <p>Academic attendance management system</p>
-                </div>
-                
-                <div class="footer-links">
-                    <div class="link-group">
-                        <h4>Portal</h4>
-                        <a href="{% url 'student_dashboard' %}">Dashboard</a>
-                        <a href="{% url 'student_portal' %}">Portal</a>                        
-                    </div>
-                    
-                    <div class="link-group">
-                        <h4>Support</h4>
-                        <a href="#">Help Center</a>
-                        <a href="#">System Status</a>
-                        <a href="#">Contact Admin</a>
-                    </div>
-                </div>
-                
-                <div class="footer-status">
-                    <div class="status-indicator">
-                        <i class="fas fa-user-graduate"></i>
-                        <span>Student Mode Active</span>
-                    </div>
-                    <div class="user-id">{{ student.registration_number }}</div>
-                </div>
+    <!-- Change Password Modal -->
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal password-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-lock"></i> Change Password</h3>
+                <button class="close-modal" id="closePasswordModal">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             
-            <div class="footer-bottom">
-                <p>&copy; 2025 Attendify Systems | Student Portal v2.1.0</p>
-                <div class="tech-info">
-                    <span>Secure Connection • Real-time Data • Encrypted QR</span>
+            <div class="modal-body">
+                <form id="passwordForm" method="POST" action="{% url 'change_password' %}">
+                    {% csrf_token %}
+                    
+                    <div class="form-section">
+                        <div class="input-group">
+                            <label class="input-label">Current Password *</label>
+                            <input type="password" 
+                                   name="old_password" 
+                                   class="input-field" 
+                                   required
+                                   placeholder="Enter your current password">
+                            <div class="password-toggle">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label class="input-label">New Password *</label>
+                            <input type="password" 
+                                   name="new_password1" 
+                                   class="input-field" 
+                                   required
+                                   placeholder="Enter new password">
+                            <div class="password-toggle">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                            <small class="field-hint">
+                                Password must contain at least 8 characters with letters and numbers.
+                            </small>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label class="input-label">Confirm New Password *</label>
+                            <input type="password" 
+                                   name="new_password2" 
+                                   class="input-field" 
+                                   required
+                                   placeholder="Confirm new password">
+                            <div class="password-toggle">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Password Requirements -->
+                    <div class="password-requirements">
+                        <h5>Password Requirements:</h5>
+                        <ul>
+                            <li class="requirement-item">
+                                <i class="fas fa-check requirement-met"></i>
+                                At least 8 characters long
+                            </li>
+                            <li class="requirement-item">
+                                <i class="fas fa-check requirement-met"></i>
+                                Contains both letters and numbers
+                            </li>
+                            <li class="requirement-item">
+                                <i class="fas fa-check requirement-met"></i>
+                                Not too similar to personal information
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelPassword">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="savePassword">
+                            <i class="fas fa-key"></i>
+                            Change Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Menu Modal -->
+    <div class="modal-overlay" id="settingsMenuModal">
+        <div class="modal settings-menu-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-cog"></i> Settings</h3>
+                <button class="close-modal" id="closeSettingsMenu">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="settings-options">
+                    <div class="settings-option" id="editProfileOption">
+                        <div class="option-icon">
+                            <i class="fas fa-user-edit"></i>
+                        </div>
+                        <div class="option-content">
+                            <h4>Edit Profile</h4>
+                            <p>Update your personal information and contact details</p>
+                        </div>
+                        <div class="option-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-option" id="changePasswordOption">
+                        <div class="option-icon">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <div class="option-content">
+                            <h4>Change Password</h4>
+                            <p>Update your account password for security</p>
+                        </div>
+                        <div class="option-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-option">
+                        <div class="option-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div class="option-content">
+                            <h4>Notifications</h4>
+                            <p>Manage your notification preferences</p>
+                        </div>
+                        <div class="option-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-option">
+                        <div class="option-icon">
+                            <i class="fas fa-moon"></i>
+                        </div>
+                        <div class="option-content">
+                            <h4>Appearance</h4>
+                            <p>Change theme and display settings</p>
+                        </div>
+                        <div class="option-arrow">
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </footer>
-
-    <!-- Floating Background Elements -->
-    <div class="background-elements">
-        <div class="floating-circle"></div>
-        <div class="floating-circle"></div>
-        <div class="floating-circle"></div>
-        <div class="floating-circle"></div>
-        <div class="floating-circle"></div>
-        <div class="floating-circle"></div>
     </div>
 
+    <!-- Notifications -->
+    <div class="notification success" id="notification">
+        <i class="fas fa-check-circle"></i>
+        <div class="notification-content">
+            <div class="notification-title">Success!</div>
+            <div class="notification-message">Your attendance has been successfully marked!</div>
+        </div>
+        <button class="close-notification" id="closeNotification">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <!-- Quick Scan Modal -->
+    <div class="modal-overlay" id="quickScanModal">
+        <div class="modal quick-scan-modal">
+            <div class="modal-header">
+                <h3>Quick Attendance Scan</h3>
+                <button class="close-modal" id="closeQuickScan">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="qr-scanner-container">
+                    <div id="quick-qr-reader" class="qr-reader"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSRF Token for AJAX requests -->
+    <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+
+    <script src="{% static 'js/student.js' %}"></script>
     
- 
-<script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.3/qr-scanner.umd.min.js"></script>
+    <!-- Profile Management Script -->
+    <script>
+        class ProfileManager {
+            constructor() {
+                this.initEventListeners();
+            }
 
+            initEventListeners() {
+                // Settings menu
+                document.getElementById('settingsLink').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.openSettingsMenu();
+                });
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                // Profile editing
+                document.getElementById('editProfileOption').addEventListener('click', () => {
+                    this.openProfileModal();
+                });
 
-<script src="{% static 'js/student.js' %}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>    
-    
+                // Password change
+                document.getElementById('changePasswordOption').addEventListener('click', () => {
+                    this.openPasswordModal();
+                });
+
+                // Close modals
+                document.getElementById('closeProfileModal').addEventListener('click', () => this.closeProfileModal());
+                document.getElementById('closePasswordModal').addEventListener('click', () => this.closePasswordModal());
+                document.getElementById('closeSettingsMenu').addEventListener('click', () => this.closeSettingsMenu());
+
+                // Cancel buttons
+                document.getElementById('cancelProfile').addEventListener('click', () => this.closeProfileModal());
+                document.getElementById('cancelPassword').addEventListener('click', () => this.closePasswordModal());
+
+                // Password visibility toggle
+                this.initPasswordToggles();
+
+                // File upload preview
+                this.initFileUpload();
+
+                // Form submissions
+                this.initFormSubmissions();
+            }
+
+            openSettingsMenu() {
+                document.getElementById('settingsMenuModal').classList.add('active');
+            }
+
+            closeSettingsMenu() {
+                document.getElementById('settingsMenuModal').classList.remove('active');
+            }
+
+            openProfileModal() {
+                this.closeSettingsMenu();
+                document.getElementById('profileModal').classList.add('active');
+            }
+
+            closeProfileModal() {
+                document.getElementById('profileModal').classList.remove('active');
+            }
+
+            openPasswordModal() {
+                this.closeSettingsMenu();
+                document.getElementById('passwordModal').classList.add('active');
+            }
+
+            closePasswordModal() {
+                document.getElementById('passwordModal').classList.remove('active');
+            }
+
+            initPasswordToggles() {
+                const toggles = document.querySelectorAll('.password-toggle');
+                toggles.forEach(toggle => {
+                    toggle.addEventListener('click', (e) => {
+                        const input = e.target.closest('.input-group').querySelector('input');
+                        const icon = e.target.closest('.password-toggle').querySelector('i');
+                        
+                        if (input.type === 'password') {
+                            input.type = 'text';
+                            icon.classList.remove('fa-eye');
+                            icon.classList.add('fa-eye-slash');
+                        } else {
+                            input.type = 'password';
+                            icon.classList.remove('fa-eye-slash');
+                            icon.classList.add('fa-eye');
+                        }
+                    });
+                });
+            }
+
+            initFileUpload() {
+                const fileInput = document.querySelector('input[name="profile_picture"]');
+                if (fileInput) {
+                    fileInput.addEventListener('change', (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            // Validate file size (5MB limit)
+                            if (file.size > 5 * 1024 * 1024) {
+                                this.showNotification('File size must be less than 5MB', 'error');
+                                e.target.value = '';
+                                return;
+                            }
+
+                            // Validate file type
+                            const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                            if (!validTypes.includes(file.type)) {
+                                this.showNotification('Please select a valid image file (JPG, PNG, GIF)', 'error');
+                                e.target.value = '';
+                                return;
+                            }
+
+                            // Preview image
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                const preview = document.querySelector('.current-avatar');
+                                preview.innerHTML = `<img src="${e.target.result}" alt="Profile Preview" class="profile-avatar">`;
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                }
+            }
+
+            initFormSubmissions() {
+                const profileForm = document.getElementById('profileForm');
+                const passwordForm = document.getElementById('passwordForm');
+
+                if (profileForm) {
+                    profileForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        
+                        const formData = new FormData(profileForm);
+                        const submitBtn = document.getElementById('saveProfile');
+                        
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                        submitBtn.disabled = true;
+
+                        try {
+                            const response = await fetch(profileForm.action, {
+                                method: 'POST',
+                                body: formData,
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                }
+                            });
+
+                            if (response.ok) {
+                                this.showNotification('Profile updated successfully!', 'success');
+                                this.closeProfileModal();
+                                // Reload to show updated data
+                                setTimeout(() => location.reload(), 1500);
+                            } else {
+                                const data = await response.json();
+                                this.showNotification(data.message || 'Error updating profile', 'error');
+                            }
+                        } catch (error) {
+                            console.error('Error:', error);
+                            this.showNotification('Network error. Please try again.', 'error');
+                        } finally {
+                            submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+                            submitBtn.disabled = false;
+                        }
+                    });
+                }
+
+                if (passwordForm) {
+                    passwordForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        
+                        const formData = new FormData(passwordForm);
+                        const submitBtn = document.getElementById('savePassword');
+                        
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Changing...';
+                        submitBtn.disabled = true;
+
+                        try {
+                            const response = await fetch(passwordForm.action, {
+                                method: 'POST',
+                                body: formData,
+                                headers: {
+                                    'X-CSRFToken': document.getElementById('csrfToken').value,
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                }
+                            });
+
+                            if (response.ok) {
+                                this.showNotification('Password changed successfully!', 'success');
+                                this.closePasswordModal();
+                                passwordForm.reset();
+                            } else {
+                                const data = await response.json();
+                                this.showNotification(data.message || 'Error changing password', 'error');
+                            }
+                        } catch (error) {
+                            console.error('Error:', error);
+                            this.showNotification('Network error. Please try again.', 'error');
+                        } finally {
+                            submitBtn.innerHTML = '<i class="fas fa-key"></i> Change Password';
+                            submitBtn.disabled = false;
+                        }
+                    });
+                }
+            }
+
+            showNotification(message, type = 'info') {
+                const notification = document.getElementById('notification');
+                if (!notification) return;
+                
+                const icon = notification.querySelector('i');
+                const title = notification.querySelector('.notification-title');
+                const messageEl = notification.querySelector('.notification-message');
+                
+                if (!icon || !title || !messageEl) return;
+                
+                notification.className = `notification ${type}`;
+                title.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+                messageEl.textContent = message;
+                
+                const icons = {
+                    success: 'fa-check-circle',
+                    error: 'fa-exclamation-circle',
+                    info: 'fa-info-circle',
+                    warning: 'fa-exclamation-triangle'
+                };
+                icon.className = `fas ${icons[type] || icons.info}`;
+                
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    this.hideNotification();
+                }, 5000);
+            }
+
+            hideNotification() {
+                const notification = document.getElementById('notification');
+                if (notification) {
+                    notification.classList.remove('show');
+                }
+            }
+        }
+
+        // Initialize profile manager when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new ProfileManager();
+        });
+
+        // Close modals when clicking outside
+        document.addEventListener('click', (e) => {
+            const modals = document.querySelectorAll('.modal-overlay');
+            modals.forEach(modal => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+
+        // Close modals with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modals = document.querySelectorAll('.modal-overlay');
+                modals.forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            }
+        });
+    </script>
+<!-- Add this in the template, preferably before the closing </body> tag -->
+<script id="unitsData" type="application/json">
+    {{ units_json|safe }}
+</script>
+
 </body>
 </html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SETTINGS-LECTURER</title>
+</head>
+<body>
+    <h1>Lecturer Profile</h1>
+    <p>Name: {{ lecturer.first_name }} {{ lecturer.last_name }}</p>
+    <p>Email: {{ lecturer.email }}</p>
+    <p>Department: {{ lecturer.department }}</p>
+
+    <a href="#" class="nav-item" id="profileModalTrigger">
+                    <div class="nav-icon">
+                        <i class="fas fa-user-cog"></i>
+                        <div class="nav-glow"></div>
+                    </div>
+                    <span>PROFILE</span>
+                    <div class="nav-indicator"></div>
+                </a>
+
+    <!-- Profile Edit Modal -->
+                <div class="modal" id="profileModal">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content cyber-modal">
+                            <form method="post" enctype="multipart/form-data" action="{% url 'profile_edit' %}" id="profileForm">
+                                {% csrf_token %}
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="profileModalLabel">EDIT PROFILE</h5>
+                                    <button type="button" class="btn-close" onclick="closeModal(this.closest('.modal'))">&times;</button>
+                                </div>
+
+                                <div class="modal-body">
+                                    <!-- User update form -->
+                                    <div class="form-section">
+                                        <h6 class="form-section-title">
+                                            <i class="fas fa-user"></i>
+                                            PERSONAL INFO
+                                        </h6>
+                                        {{ user_form.as_p }}
+                                    </div>
+
+                                    <!-- Lecturer-specific form -->
+                                    <div class="form-section">
+                                        <h6 class="form-section-title">
+                                            <i class="fas fa-chalkboard-teacher"></i>
+                                            LECTURER PROFILE
+                                        </h6>
+                                        {{ lecturer_form.as_p }}
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" onclick="closeModal(this.closest('.modal'))">CANCEL</button>
+                                    <button type="submit" class="btn btn-primary cyber-btn">SAVE CHANGES</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+    
+</body>
+</html>

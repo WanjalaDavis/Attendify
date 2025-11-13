@@ -90,6 +90,25 @@ urlpatterns = [
     
     # QR Scanning endpoint
     path('scan-qr-code/', views.scan_qr_code_endpoint, name='scan_qr_code'),
+
+    
+    path("api/lecturer/class-status/", views.api_lecturer_class_status, name="api_lecturer_class_status"),
+    path("api/lecturer/notifications/", views.api_lecturer_notifications, name="api_lecturer_notifications"),
+
+    
+    path("api/lecturer/dashboard-data/", views.api_lecturer_dashboard_data, name="api_lecturer_dashboard_data"),
+
+
+    # API endpoints for charts and data
+    path('api/lecturer/performance-data/', views.api_lecturer_performance_data, name='api_lecturer_performance_data'),
+    path('api/lecturer/recent-attendance/', views.api_lecturer_recent_attendance, name='api_lecturer_recent_attendance'),
+    path('api/lecturer/class-status/', views.api_lecturer_class_status, name='api_lecturer_class_status'),
+    path('api/lecturer/dashboard-data/', views.api_lecturer_dashboard_data, name='api_lecturer_dashboard_data'),
+    path('api/delete-class/<uuid:class_id>/', views.api_delete_class, name='api_delete_class'),
+    
+    # Existing QR and class endpoints
+    path('api/generate-qr/<uuid:class_id>/', views.generate_qr_code, name='generate_qr_code'),
+    path('api/schedule-class/', views.api_schedule_class, name='api_schedule_class'),
     
     # Lecturer APIs - ALL MISSING ENDPOINTS ADDED
     path("api/lecturer/recent-attendance/", views.api_lecturer_recent_attendance, name="api_lecturer_recent_attendance"),

@@ -7,7 +7,7 @@
     <title>Lecturer Dashboard - Attendify</title>
     
     <!-- External CSS -->
-    <link rel="stylesheet" href="{% static 'css/lecturer.css' %}">
+    <link rel="stylesheet" href="{% static 'css/lecturer_dashboard.css' %}">
     <link rel="icon" href="{% static 'images/attendify_logo.png' %}" type="image/x-icon">
     
     <!-- Font Awesome -->
@@ -18,6 +18,9 @@
     
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <!-- AOS Library for Scroll Animations -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 </head>
 <body>
     <!-- Matrix Background Canvas -->
@@ -57,9 +60,12 @@
                 </div>
 
                 <div class="header-actions">
+                    <!-- Real-time Clock -->
+                    <div class="header-clock" id="headerClock"></div>
+                    
                     <button class="btn-notification" id="notificationBtn">
                         <i class="fas fa-bell"></i>
-                        <span class="notification-badge">3</span>
+                        <span class="notification-badge" id="notificationCount">0</span>
                         <div class="btn-glow"></div>
                     </button>
                     <div class="dropdown">
@@ -89,7 +95,7 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <nav class="sidebar-nav">
-                <a href="{% url 'lecturer_dashboard' %}" class="nav-item active">
+                <a href="{% url 'lecturer_dashboard' %}" class="nav-item active" data-tab="dashboard">
                     <div class="nav-icon">
                         <i class="fas fa-tachometer-alt"></i>
                         <div class="nav-glow"></div>
@@ -97,7 +103,7 @@
                     <span>DASHBOARD</span>
                     <div class="nav-indicator"></div>
                 </a>
-                <a href="{% url 'lecturer_portal' %}" class="nav-item">
+                <a href="{% url 'lecturer_portal' %}" class="nav-item" data-tab="portal">
                     <div class="nav-icon">
                         <i class="fas fa-book-open"></i>
                         <div class="nav-glow"></div>
@@ -105,7 +111,7 @@
                     <span>TEACHING PORTAL</span>
                     <div class="nav-indicator"></div>
                 </a>
-                <a href="{% url 'lecturer_attendance' %}" class="nav-item">
+                <a href="{% url 'lecturer_attendance' %}" class="nav-item" data-tab="attendance">
                     <div class="nav-icon">
                         <i class="fas fa-clipboard-check"></i>
                         <div class="nav-glow"></div>
@@ -113,7 +119,8 @@
                     <span>ATTENDANCE</span>
                     <div class="nav-indicator"></div>
                 </a>
-                <a href="#" class="nav-item" data-bs-toggle="modal" data-bs-target="#profileModal">
+
+                <a href="{% url 'profile_edit' %}" class="nav-item" data-tab="profile">
                     <div class="nav-icon">
                         <i class="fas fa-user-cog"></i>
                         <div class="nav-glow"></div>
@@ -122,48 +129,8 @@
                     <div class="nav-indicator"></div>
                 </a>
                 
-                <!-- Profile Edit Modal -->
-                    <div class="modal" id="profileModal">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content cyber-modal">
-                                <form method="post" enctype="multipart/form-data" action="{% url 'profile_edit' %}">
-                                    {% csrf_token %}
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="profileModalLabel">EDIT PROFILE</h5>
-                                        <button type="button" class="btn-close" onclick="closeModal(this.closest('.modal'))">&times;</button>
-                                    </div>
-
-                                    <div class="modal-body">
-                                        <!-- User update form -->
-                                        <div class="form-section">
-                                            <h6 class="form-section-title">
-                                                <i class="fas fa-user"></i>
-                                                PERSONAL INFO
-                                            </h6>
-                                            {{ user_form.as_p }}
-                                        </div>
-
-                                        <!-- Lecturer-specific form -->
-                                        <div class="form-section">
-                                            <h6 class="form-section-title">
-                                                <i class="fas fa-chalkboard-teacher"></i>
-                                                LECTURER PROFILE
-                                            </h6>
-                                            {{ lecturer_form.as_p }}
-                                        </div>
-                                    </div>
-
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" onclick="closeModal(this.closest('.modal'))">CANCEL</button>
-                                        <button type="submit" class="btn btn-primary cyber-btn">SAVE CHANGES</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                
                 <div class="nav-divider"></div>
-                <a href="#" class="nav-item">
+                <a href="#" class="nav-item" onclick="showTutorial()">
                     <div class="nav-icon">
                         <i class="fas fa-question-circle"></i>
                         <div class="nav-glow"></div>
@@ -176,23 +143,23 @@
             
             <!-- Quick Stats Sidebar -->
             <div class="sidebar-stats">
-                <div class="stat-card mini cyber-stat">
+                <div class="stat-card mini cyber-stat" id="totalStudentsCard">
                     <div class="stat-icon">
                         <i class="fas fa-users"></i>
                         <div class="icon-glow"></div>
                     </div>
                     <div class="stat-info">
-                        <span class="stat-value">{{ total_students }}</span>
+                        <span class="stat-value" id="totalStudentsValue">{{ total_students|default:"0" }}</span>
                         <span class="stat-label">TOTAL STUDENTS</span>
                     </div>
                 </div>
-                <div class="stat-card mini cyber-stat">
+                <div class="stat-card mini cyber-stat" id="teachingUnitsCard">
                     <div class="stat-icon">
                         <i class="fas fa-book"></i>
                         <div class="icon-glow"></div>
                     </div>
                     <div class="stat-info">
-                        <span class="stat-value">{{ teaching_units }}</span>
+                        <span class="stat-value" id="teachingUnitsValue">{{ teaching_units|default:"0" }}</span>
                         <span class="stat-label">TEACHING UNITS</span>
                     </div>
                 </div>
@@ -206,8 +173,10 @@
                 <div class="welcome-card cyber-card">
                     <div class="card-glow"></div>
                     <div class="welcome-content">
-                        <h2>WELCOME BACK, <span class="cyber-text">{{ user.first_name|default:"PROFESSOR" }}</span>! 👋</h2>
-                        <p class="welcome-text">READY TO MANAGE YOUR CLASSES AND TRACK ATTENDANCE EFFICIENTLY.</p>
+                        <h2>WELCOME BACK, <span class="cyber-text">{{ user.get_full_name|default:user.username }}</span>! 👋</h2>
+
+                        <p class="welcome-text">Managing <strong>{{ teaching_units }}</strong> units with <strong>{{ total_students }}</strong> students</p>
+
                         <div class="quick-actions">
                             <button class="btn-primary cyber-btn" onclick="location.href='{% url 'lecturer_portal' %}?tab=classes'">
                                 <i class="fas fa-plus"></i>SCHEDULE NEW CLASS
@@ -230,41 +199,51 @@
             <section class="stats-section">
                 <h3 class="section-title cyber-title">OVERVIEW</h3>
                 <div class="stats-grid">
-                    <div class="stat-card large cyber-stat">
+                    <div class="stat-card large cyber-stat" id="todaysClassesCard">
                         <div class="stat-icon primary">
                             <i class="fas fa-calendar-day"></i>
                             <div class="icon-glow"></div>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-value">{{ todays_classes.count }}</span>
+                            <span class="stat-value" id="todaysClassesValue">{{ todays_classes|length }}</span>
                             <span class="stat-label">TODAY'S CLASSES</span>
-                            <span class="stat-trend positive">
+                            <span class="stat-trend positive" id="todaysClassesStatus">
+                                {% if todays_classes|length > 0 %}
                                 <i class="fas fa-arrow-up"></i> ON SCHEDULE
+                                {% else %}
+                                <i class="fas fa-minus"></i> NO CLASSES
+                                {% endif %}
                             </span>
                         </div>
                     </div>
                     
-                    <div class="stat-card large cyber-stat">
+                    <div class="stat-card large cyber-stat" id="attendanceCard">
                         <div class="stat-icon success">
                             <i class="fas fa-user-check"></i>
                             <div class="icon-glow"></div>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-value">{% widthratio present_students total_students 100 %}%</span>
+                            <span class="stat-value" id="attendanceValue">{{ overall_attendance_percentage|default:"0" }}%</span>
                             <span class="stat-label">AVERAGE ATTENDANCE</span>
-                            <span class="stat-trend positive">
-                                <i class="fas fa-chart-line"></i> GOOD ENGAGEMENT
+                            <span class="stat-trend positive" id="attendanceTrend">
+                                {% if overall_attendance_percentage > 75 %}
+                                <i class="fas fa-chart-line"></i> EXCELLENT
+                                {% elif overall_attendance_percentage > 50 %}
+                                <i class="fas fa-chart-line"></i> GOOD
+                                {% else %}
+                                <i class="fas fa-exclamation-triangle"></i> NEEDS ATTENTION
+                                {% endif %}
                             </span>
                         </div>
                     </div>
                     
-                    <div class="stat-card large cyber-stat">
+                    <div class="stat-card large cyber-stat" id="upcomingClassesCard">
                         <div class="stat-icon warning">
                             <i class="fas fa-clock"></i>
                             <div class="icon-glow"></div>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-value">{{ upcoming_classes.count }}</span>
+                            <span class="stat-value" id="upcomingClassesValue">{{ upcoming_classes|length }}</span>
                             <span class="stat-label">UPCOMING CLASSES</span>
                             <span class="stat-trend neutral">
                                 <i class="fas fa-calendar"></i> NEXT 7 DAYS
@@ -272,13 +251,13 @@
                         </div>
                     </div>
                     
-                    <div class="stat-card large cyber-stat">
+                    <div class="stat-card large cyber-stat" id="activeUnitsCard">
                         <div class="stat-icon info">
                             <i class="fas fa-chart-bar"></i>
                             <div class="icon-glow"></div>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-value">{{ teaching_units }}</span>
+                            <span class="stat-value" id="activeUnitsValue">{{ teaching_units|default:"0" }}</span>
                             <span class="stat-label">ACTIVE UNITS</span>
                             <span class="stat-trend positive">
                                 <i class="fas fa-book"></i> THIS SEMESTER
@@ -298,44 +277,89 @@
                             <i class="fas fa-calendar-day"></i>
                             TODAY'S CLASSES
                         </h3>
-                        <span class="card-badge cyber-badge">{{ todays_classes.count }}</span>
+                        <span class="card-badge cyber-badge" id="todaysClassesBadge">{{ todays_classes|length }}</span>
                     </div>
                     <div class="card-content">
                         {% if todays_classes %}
-                            <div class="classes-list">
+                            <div class="classes-list" id="todaysClassesList">
                                 {% for class in todays_classes %}
-                                <div class="class-item cyber-item {% if class.is_ongoing %}ongoing{% endif %}">
-                                    <div class="class-info">
-                                        <h4 class="class-name">{{ class.semester_unit.unit.name }}</h4>
-                                        <div class="class-details">
-                                            <span class="class-time">
-                                                <i class="fas fa-clock"></i>
-                                                {{ class.start_time|time:"H:i" }} - {{ class.end_time|time:"H:i" }}
+                                <div class="class-card" 
+                                     data-class-id="{{ class.id }}"
+                                     data-schedule-date="{{ class.schedule_date|date:'Y-m-d' }}"
+                                     data-start-time="{{ class.start_time|time:'H:i:s' }}"
+                                     data-end-time="{{ class.end_time|time:'H:i:s' }}"
+                                     data-status="{{ class.status }}">
+                                    
+                                    <!-- Class Header with Status and Actions -->
+                                    <div class="class-header">
+                                        <!-- Status Section -->
+                                        <div class="class-status">
+                                            <span class="class-status-indicator status-{{ class.status|lower }}"></span>
+                                            <span style="text-transform: uppercase; color: {% if class.status == 'ONGOING' %}#10b981{% elif class.status == 'UPCOMING' %}#f59e0b{% else %}#6b7280{% endif %};">
+                                                {{ class.status }}
                                             </span>
-                                            <span class="class-venue">
-                                                <i class="fas fa-map-marker-alt"></i>
-                                                {{ class.venue }}
+                                            <span class="class-time-display">
+                                                {% if class.status == 'ONGOING' %}
+                                                    <span id="time-elapsed-{{ class.id }}"></span>
+                                                {% elif class.status == 'UPCOMING' %}
+                                                    <span id="time-remaining-{{ class.id }}"></span> 
+                                                {% else %}
+                                                    Class Ended
+                                                {% endif %}
                                             </span>
                                         </div>
-                                        {% if class.is_ongoing %}
-                                        <span class="class-status ongoing cyber-status">ONGOING</span>
-                                        {% endif %}
+                                        
+                                        <!-- Actions Section -->
+                                        <div class="class-actions">
+                                            <!-- QR Button - Always Visible -->
+                                            <button class="generate-qr-btn" 
+                                                    data-class-id="{{ class.id }}"
+                                                    data-status="{{ class.status }}"
+                                                    onclick="generateQRCode('{{ class.id }}')">
+                                                {% if class.status == 'ONGOING' %}
+                                                    <i class="fas fa-qrcode"></i> GENERATE QR
+                                                {% elif class.status == 'UPCOMING' %}
+                                                    <i class="fas fa-clock"></i> NOT STARTED
+                                                {% else %}
+                                                    <i class="fas fa-ban"></i> CLASS ENDED
+                                                {% endif %}
+                                            </button>
+                                            
+                                            <!-- Attendance Button -->
+                                            <button class="btn-sm btn-outline cyber-btn" onclick="location.href='{% url 'lecturer_attendance' %}?class_id={{ class.id }}'">
+                                                <i class="fas fa-clipboard-check"></i> ATTENDANCE
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="class-actions">
-                                        {% if class.is_ongoing %}
-                                        <button class="btn-sm btn-success cyber-btn" onclick="generateQRCode('{{ class.id }}')">
-                                            <i class="fas fa-qrcode"></i> GENERATE QR
-                                        </button>
-                                        {% endif %}
-                                        <button class="btn-sm btn-outline cyber-btn" onclick="location.href='{% url 'lecturer_attendance' %}?class_id={{ class.id }}'">
-                                            <i class="fas fa-clipboard-check"></i> ATTENDANCE
-                                        </button>
+                                    
+                                    <!-- Class Content -->
+                                    <div class="class-content">
+                                        <!-- Class Icon -->
+                                        <div class="class-icon">
+                                            <i class="fas fa-{% if class.status == 'ONGOING' %}play-circle{% elif class.status == 'UPCOMING' %}clock{% else %}check-circle{% endif %}"></i>
+                                        </div>
+                                        
+                                        <!-- Class Details -->
+                                        <div class="class-details">
+                                            <h4>{{ class.semester_unit.unit.name }}</h4>
+                                            <p class="class-meta">
+                                                {{ class.semester_unit.unit.code }} | {{ class.venue }}
+                                            </p>
+                                            <div class="class-info">
+                                                <span class="time">
+                                                    {{ class.start_time|time:"H:i" }} - {{ class.end_time|time:"H:i" }}
+                                                </span>
+                                                <span class="students">
+                                                    {{ class.enrolled_students_count }} students
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
                         {% else %}
-                            <div class="empty-state">
+                            <div class="empty-state" id="noClassesToday">
                                 <i class="fas fa-calendar-times"></i>
                                 <p>NO CLASSES SCHEDULED FOR TODAY</p>
                                 <button class="btn-primary cyber-btn" onclick="location.href='{% url 'lecturer_portal' %}?tab=classes'">
@@ -422,30 +446,33 @@
                     </div>
                     <div class="card-content">
                         {% if upcoming_classes %}
-                            <div class="upcoming-classes">
+                            <div class="upcoming-classes" id="upcomingClassesList">
                                 {% for class in upcoming_classes %}
-                                <div class="upcoming-class-item cyber-item">
-                                    <div class="class-date">
-                                        <span class="date-day">{{ class.schedule_date|date:"d" }}</span>
-                                        <span class="date-month">{{ class.schedule_date|date:"M" }}</span>
-                                    </div>
-                                    <div class="class-details">
-                                        <h4 class="class-name">{{ class.semester_unit.unit.name }}</h4>
-                                        <div class="class-meta">
-                                            <span class="class-time">{{ class.start_time|time:"H:i" }} - {{ class.end_time|time:"H:i" }}</span>
-                                            <span class="class-venue">{{ class.venue }}</span>
+                                <div class="class-card" data-status="{{ class.status }}">
+                                    <div class="class-content">
+                                        <div class="class-icon">
+                                            <i class="fas fa-clock"></i>
                                         </div>
-                                    </div>
-                                    <div class="class-actions">
-                                        <button class="btn-sm btn-outline cyber-btn" onclick="location.href='{% url 'lecturer_portal' %}?class_id={{ class.id }}'">
-                                            DETAILS
-                                        </button>
+                                        <div class="class-details">
+                                            <h4>{{ class.semester_unit.unit.name }}</h4>
+                                            <p class="class-meta">
+                                                {{ class.schedule_date|date:"D, M d" }} | {{ class.venue }}
+                                            </p>
+                                            <div class="class-info">
+                                                <span class="time">
+                                                    {{ class.start_time|time:"H:i" }} - {{ class.end_time|time:"H:i" }}
+                                                </span>
+                                                <span class="students">
+                                                    {{ class.enrolled_students_count }} students
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
                         {% else %}
-                            <div class="empty-state">
+                            <div class="empty-state" id="noUpcomingClasses">
                                 <i class="fas fa-calendar-plus"></i>
                                 <p>NO UPCOMING CLASSES IN THE NEXT 7 DAYS</p>
                             </div>
@@ -469,22 +496,124 @@
                         <div class="chart-legend">
                             <div class="legend-item">
                                 <span class="legend-color present"></span>
-                                <span>PRESENT (75%)</span>
+                                <span id="presentLegend">PRESENT ({{ overall_attendance_percentage|default:"0" }}%)</span>
                             </div>
                             <div class="legend-item">
                                 <span class="legend-color late"></span>
-                                <span>LATE (15%)</span>
+                                <span id="lateLegend">LATE (15%)</span>
                             </div>
                             <div class="legend-item">
                                 <span class="legend-color absent"></span>
-                                <span>ABSENT (10%)</span>
+                               <span id="absentLegend">ABSENT (0%)</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- System Guide & Notifications -->
+            <!-- Performance Analytics & Recent Activity -->
+            <section class="content-grid">
+                <!-- Performance Analytics -->
+                <div class="content-card cyber-card">
+                    <div class="card-glow"></div>
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-line"></i>
+                            PERFORMANCE ANALYTICS
+                        </h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="chart-container">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                        <div class="performance-stats">
+                            <div class="performance-stat">
+                                <span class="stat-label">Weekly Average</span>
+                                <span class="stat-value" id="weeklyAverage">{{ overall_attendance_percentage|default:"78.5" }}%</span>
+                            </div>
+                            <div class="performance-stat">
+                                <span class="stat-label">Trend</span>
+                                <span class="stat-value positive" id="performanceTrend">
+                                    <i class="fas fa-arrow-up"></i> 5.2%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="content-card cyber-card">
+                    <div class="card-glow"></div>
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-bell"></i>
+                            RECENT ACTIVITY
+                        </h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="activity-feed" id="recentActivityFeed">
+                            {% if recent_activities %}
+                                {% for activity in recent_activities %}
+                                <div class="activity-item cyber-activity">
+                                    <div class="activity-icon {{ activity.status|default:'info' }}">
+                                        <i class="fas fa-{{ activity.icon|default:'bell' }}"></i>
+                                        <div class="activity-glow"></div>
+                                    </div>
+                                    <div class="activity-content">
+                                        <p>{{ activity.message|default:"Activity recorded" }}</p>
+                                        <span class="activity-time">{{ activity.time|default:"Recently" }}</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <!-- Fallback activities when no data -->
+                                <div class="activity-item cyber-activity">
+                                    <div class="activity-icon success">
+                                        <i class="fas fa-sign-in-alt"></i>
+                                        <div class="activity-glow"></div>
+                                    </div>
+                                    <div class="activity-content">
+                                        <p>You logged in to the system</p>
+                                        <span class="activity-time">Just now</span>
+                                    </div>
+                                </div>
+                                <div class="activity-item cyber-activity">
+                                    <div class="activity-icon info">
+                                        <i class="fas fa-info-circle"></i>
+                                        <div class="activity-glow"></div>
+                                    </div>
+                                    <div class="activity-content">
+                                        <p>Welcome to Attendify Lecturer Dashboard</p>
+                                        <span class="activity-time">Today</span>
+                                    </div>
+                                </div>
+                                <div class="activity-item cyber-activity">
+                                    <div class="activity-icon primary">
+                                        <i class="fas fa-chart-line"></i>
+                                        <div class="activity-glow"></div>
+                                    </div>
+                                    <div class="activity-content">
+                                        <p>Dashboard data loaded successfully</p>
+                                        <span class="activity-time">Just now</span>
+                                    </div>
+                                </div>
+                                <div class="activity-item cyber-activity">
+                                    <div class="activity-icon warning">
+                                        <i class="fas fa-clock"></i>
+                                        <div class="activity-glow"></div>
+                                    </div>
+                                    <div class="activity-content">
+                                        <p>No classes scheduled for today</p>
+                                        <span class="activity-time">Today</span>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Guide & Unit Performance -->
             <section class="content-grid">
                 <!-- Getting Started Guide -->
                 <div class="content-card cyber-card">
@@ -545,65 +674,76 @@
                     </div>
                 </div>
 
-                <!-- Recent Activity & Notifications -->
+                <!-- Unit Performance -->
                 <div class="content-card cyber-card">
                     <div class="card-glow"></div>
                     <div class="card-header">
                         <h3 class="card-title">
-                            <i class="fas fa-bell"></i>
-                            RECENT ACTIVITY
+                            <i class="fas fa-trophy"></i>
+                            UNIT PERFORMANCE
                         </h3>
                     </div>
                     <div class="card-content">
-                        <div class="activity-feed">
-                            <div class="activity-item cyber-activity">
-                                <div class="activity-icon success">
-                                    <i class="fas fa-qrcode"></i>
-                                    <div class="activity-glow"></div>
+                        <div class="unit-performance-list" id="unitPerformanceList">
+                            {% for unit in units %}
+                            <div class="unit-performance-item">
+                                <div class="unit-info">
+                                    <h4>{{ unit.code }}</h4>
+                                    <p>{{ unit.name }}</p>
                                 </div>
-                                <div class="activity-content">
-                                    <p>QR CODE GENERATED FOR DATABASE SYSTEMS CLASS</p>
-                                    <span class="activity-time">2 HOURS AGO</span>
+                                <div class="unit-stats">
+                                    <div class="attendance-rate">
+                                        <span class="rate-value">{{ unit.average_attendance|default:"0" }}%</span>
+                                        <span class="rate-label">Attendance</span>
+                                    </div>
+                                    <div class="student-count">
+                                        <span class="count-value">{{ unit.enrolled_students_count|default:"0" }}</span>
+                                        <span class="count-label">Students</span>
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <div class="activity-item cyber-activity">
-                                <div class="activity-icon info">
-                                    <i class="fas fa-clipboard-check"></i>
-                                    <div class="activity-glow"></div>
-                                </div>
-                                <div class="activity-content">
-                                    <p>ATTENDANCE MARKED FOR 45 STUDENTS IN WEB DEVELOPMENT</p>
-                                    <span class="activity-time">YESTERDAY, 10:30 AM</span>
-                                </div>
-                            </div>
-                            
-                            <div class="activity-item cyber-activity">
-                                <div class="activity-icon warning">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <div class="activity-glow"></div>
-                                </div>
-                                <div class="activity-content">
-                                    <p>LOW ATTENDANCE ALERT: NETWORK SECURITY (65%)</p>
-                                    <span class="activity-time">2 DAYS AGO</span>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: {{ unit.average_attendance|default:"0" }}%"></div>
                                 </div>
                             </div>
-                            
-                            <div class="activity-item cyber-activity">
-                                <div class="activity-icon primary">
-                                    <i class="fas fa-calendar-plus"></i>
-                                    <div class="activity-glow"></div>
-                                </div>
-                                <div class="activity-content">
-                                    <p>NEW CLASS SCHEDULED: ADVANCED PROGRAMMING</p>
-                                    <span class="activity-time">3 DAYS AGO</span>
-                                </div>
+                            {% empty %}
+                            <div class="empty-state small">
+                                <i class="fas fa-book"></i>
+                                <p>NO UNITS ASSIGNED</p>
                             </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qrCodeModal" class="modal cyber-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>QR CODE FOR CLASS</h3>
+                <button class="modal-close" onclick="closeQRCodeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="qr-code-container">
+                    <div id="qrCodeImage"></div>
+                    <div class="qr-code-info">
+                        <h4 id="qrClassName">Class Name</h4>
+                        <p>Valid for: <span id="qrExpiryTime">5 minutes</span></p>
+                        <p class="qr-token">Token: <code id="qrTokenDisplay"></code></p>
+                    </div>
+                </div>
+                <div class="qr-actions">
+                    <button class="btn-primary cyber-btn" onclick="downloadQRCode()">
+                        <i class="fas fa-download"></i> DOWNLOAD QR
+                    </button>
+                    <button class="btn-outline cyber-btn" onclick="closeQRCodeModal()">
+                        CLOSE
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Tutorial Modal -->
@@ -638,14 +778,182 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> 
 
-    <!-- Loading Spinner -->
-    <div id="loadingSpinner" class="loading-spinner">
-        <div class="cyber-spinner"></div>
-    </div>
+    <!-- CSRF Token for AJAX requests -->
+    <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+
+        <!-- Cyber Footer -->
+    <footer class="cyber-footer">
+        <div class="footer-grid">
+            <!-- Brand Section -->
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <div class="cyber-logo">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <div class="glow-effect"></div>
+                    </div>
+                    <span class="brand-name">ATTENDIFY</span>
+                </div>
+                <p class="footer-tagline">Revolutionizing Classroom Attendance Management</p>
+                <div class="footer-stats">
+                    <div class="stat">
+                        <span class="stat-value">{{ total_students|default:"0" }}</span>
+                        <span class="stat-label">ACTIVE STUDENTS</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">{{ teaching_units|default:"0" }}</span>
+                        <span class="stat-label">TEACHING UNITS</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">{{ todays_classes|length }}</span>
+                        <span class="stat-label">TODAY'S CLASSES</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="footer-section">
+                <h4 class="footer-title">QUICK ACCESS</h4>
+                <div class="footer-links">
+                    <a href="{% url 'lecturer_dashboard' %}" class="footer-link">
+                        <i class="fas fa-tachometer-alt"></i>
+                        DASHBOARD
+                    </a>
+                    <a href="{% url 'lecturer_portal' %}" class="footer-link">
+                        <i class="fas fa-book-open"></i>
+                        TEACHING PORTAL
+                    </a>
+                    <a href="{% url 'lecturer_attendance' %}" class="footer-link">
+                        <i class="fas fa-clipboard-check"></i>
+                        ATTENDANCE
+                    </a>
+                    <a href="{% url 'profile_edit' %}" class="footer-link">
+                        <i class="fas fa-user-cog"></i>
+                        PROFILE SETTINGS
+                    </a>
+                </div>
+            </div>
+
+            <!-- Resources -->
+            <div class="footer-section">
+                <h4 class="footer-title">RESOURCES</h4>
+                <div class="footer-links">
+                    <a href="#" class="footer-link" onclick="showTutorial()">
+                        <i class="fas fa-graduation-cap"></i>
+                        USER GUIDE
+                    </a>
+                    <a href="#" class="footer-link">
+                        <i class="fas fa-qrcode"></i>
+                        QR CODE HELP
+                    </a>
+                    <a href="#" class="footer-link">
+                        <i class="fas fa-chart-bar"></i>
+                        REPORTING GUIDE
+                    </a>
+                    <a href="#" class="footer-link">
+                        <i class="fas fa-mobile-alt"></i>
+                        MOBILE APP
+                    </a>
+                </div>
+            </div>
+
+            <!-- Support & Contact -->
+            <div class="footer-section">
+                <h4 class="footer-title">SUPPORT</h4>
+                <div class="footer-contact">
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <span>support@attendify.edu</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <span>+254 115 855 856</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-clock"></i>
+                        <span>Mon - Fri: 8:00 AM - 5:00 PM</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Nairobi, Kenya</span>
+                    </div>
+                </div>
+                
+                <!-- System Status -->
+                <div class="system-status">
+                    <div class="status-indicator online">
+                        <div class="status-dot"></div>
+                        <span>SYSTEM: ONLINE</span>
+                    </div>
+                    <div class="last-sync">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Last sync: <span id="lastSyncTime">Just now</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Bottom -->
+        <div class="footer-bottom">
+            <div class="footer-bottom-content">
+                <div class="copyright">
+                    <p>&copy; 2025 Attendify LMS. All rights reserved. | Empowering Educators, Engaging Students</p>
+                </div>
+                
+                <div class="footer-actions">
+                    <button class="footer-btn" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i>
+                        REFRESH DATA
+                    </button>
+                    <button class="footer-btn" onclick="showSystemInfo()">
+                        <i class="fas fa-info-circle"></i>
+                        SYSTEM INFO
+                    </button>
+                    <button class="footer-btn" onclick="exportData()">
+                        <i class="fas fa-download"></i>
+                        EXPORT DATA
+                    </button>
+                </div>
+
+                <div class="tech-stack">
+                    <span class="tech-label">Powered by:</span>
+                    <div class="tech-icons">
+                        <i class="fab fa-python" title="Django"></i>
+                        <i class="fab fa-js-square" title="JavaScript"></i>
+                        <i class="fas fa-database" title="MySql"></i>
+                        <i class="fab fa-html5" title="HTML5"></i>
+                        <i class="fab fa-css3-alt" title="CSS3"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connection Status Bar -->
+        <div class="connection-status">
+            <div class="status-bar">
+                <div class="status-item">
+                    <i class="fas fa-user"></i>
+                    <span>Logged in as: {{ user.get_full_name|default:user.username }}</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-clock"></i>
+                    <span>Session: <span id="sessionTimer">00:00:00</span></span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Security: Encrypted</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-server"></i>
+                    <span>Server: Nairobi-01</span>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <!-- External JavaScript -->
-    <script src="{% static 'js/lecturer.js' %}"></script>
+    <script src="{% static 'js/lecturer_dashboard.js' %}"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 </body>
 </html>

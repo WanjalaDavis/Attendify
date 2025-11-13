@@ -28,10 +28,10 @@ SECRET_KEY = 'django-insecure-k@*5-dsx&c+_u&8!x1t=1)atg4fe@!&z#w#zo&3et&@1-%p41k
 DEBUG = True
 
 # ALLOWED_HOSTS = []
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'ac6b225d53ba.ngrok-free.app']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'bfe3808e5a26.ngrok-free.app']
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://*ac6b225d53ba.ngrok-free.app',  
+    'https://bfe3808e5a26.ngrok-free.app',  
 ]
 
 
@@ -141,7 +141,7 @@ MEDIA_URL = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# AUTH_USER_MODEL = "attendify.CustomUser"
+
 AUTH_USER_MODEL = "attendify.User"  
 
 
@@ -154,7 +154,7 @@ LOGOUT_REDIRECT_URL = 'login'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Session settings
-SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
+SESSION_COOKIE_AGE = 1209600 
 SESSION_SAVE_EVERY_REQUEST = True
 
 

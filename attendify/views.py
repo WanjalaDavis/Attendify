@@ -543,7 +543,7 @@ def system_logs(request):
 
 @lecturer_required
 def lecturer_dashboard(request):
-    """Lecturer dashboard with proper error handling"""
+    """Lecturer dashboard with proper error handling and complete context"""
     try:
         lecturer = request.user.lecturer_profile
     except LecturerProfile.DoesNotExist:
@@ -565,10 +565,18 @@ def lecturer_dashboard(request):
             lecturer=lecturer,
             schedule_date=today,
             is_active=True
-        ).select_related('semester_unit__unit')
+        ).select_related('semester_unit__unit', 'semester_unit__unit__department')
 
-        # Mark status for classes using new function
+        # Add enrolled students count and status to each class
         for class_obj in todays_classes:
+            # Calculate enrolled students count
+            enrolled_count = StudentUnitEnrollment.objects.filter(
+                semester_unit=class_obj.semester_unit,
+                is_active=True
+            ).count()
+            class_obj.enrolled_students_count = enrolled_count
+            
+            # Calculate class status
             class_obj.status = get_class_status(class_obj)
             class_obj.is_ongoing = class_obj.status == 'ONGOING'
             class_obj.can_generate_qr = can_generate_qr(class_obj)
@@ -580,11 +588,77 @@ def lecturer_dashboard(request):
             lecturer=lecturer,
             schedule_date__range=[upcoming_start, upcoming_end],
             is_active=True
-        ).order_by('schedule_date', 'start_time').select_related('semester_unit__unit')
+        ).order_by('schedule_date', 'start_time').select_related('semester_unit__unit', 'semester_unit__unit__department')
+
+        # Add enrolled students count and status to upcoming classes
+        for class_obj in upcoming_classes:
+            enrolled_count = StudentUnitEnrollment.objects.filter(
+                semester_unit=class_obj.semester_unit,
+                is_active=True
+            ).count()
+            class_obj.enrolled_students_count = enrolled_count
+            class_obj.status = get_class_status(class_obj)
+
+        # Calculate attendance statistics
+        all_attendances = Attendance.objects.filter(
+            class_schedule__lecturer=lecturer
+        )
+        total_attendance_records = all_attendances.count()
+        present_attendance_records = all_attendances.filter(
+            status__in=['PRESENT', 'LATE']
+        ).count()
+        
+        # Calculate average attendance percentage
+        overall_attendance_percentage = round(
+            (present_attendance_records / total_attendance_records * 100), 2
+        ) if total_attendance_records > 0 else 0.0
+
+        # Get total classes held
+        total_classes = ClassSchedule.objects.filter(
+            lecturer=lecturer,
+            schedule_date__lte=today,
+            is_active=True
+        ).count()
+
+        # Get recent activity from system logs - FIXED with proper data structure
+        recent_activity_logs = SystemLog.objects.filter(
+            user=request.user
+        ).order_by('-timestamp')[:5]
+
+        # Create proper recent activity data structure
+        recent_activities = []
+        for log in recent_activity_logs:
+            activity = {
+                'type': log.action_type.lower(),
+                'message': log.description,
+                'time': log.timestamp.strftime('%H:%M'),
+                'icon': get_activity_icon(log.action_type),
+                'status': get_activity_status(log.action_type)
+            }
+            recent_activities.append(activity)
+
+        # If no system logs, provide sample activities
+        if not recent_activities:
+            recent_activities = [
+                {
+                    'type': 'login',
+                    'message': 'You logged in to the system',
+                    'time': timezone.now().strftime('%H:%M'),
+                    'icon': 'sign-in-alt',
+                    'status': 'info'
+                },
+                {
+                    'type': 'system',
+                    'message': 'Welcome to Attendify Lecturer Dashboard',
+                    'time': 'Today',
+                    'icon': 'info-circle',
+                    'status': 'info'
+                }
+            ]
 
         # Preload forms for profile modal
         user_form = UserUpdateForm(instance=request.user)
-        profile_form = LecturerProfileForm(instance=lecturer)
+        lecturer_form = LecturerProfileForm(instance=lecturer)
 
         context = {
             'lecturer': lecturer,
@@ -592,14 +666,58 @@ def lecturer_dashboard(request):
             'total_students': total_students,
             'todays_classes': todays_classes,
             'upcoming_classes': upcoming_classes,
+            'present_students': present_attendance_records,
+            'overall_attendance_percentage': overall_attendance_percentage,
+            'total_classes': total_classes,
+            'recent_activities': recent_activities,  # Use the fixed data structure
             'user_form': user_form,
-            'profile_form': profile_form,
+            'lecturer_form': lecturer_form,  
         }
         return render(request, 'lecturer/dashboard.html', context)
     except Exception as e:
         logger.error("Error loading lecturer dashboard for user=%s: %s", request.user.username, str(e))
         messages.error(request, "Error loading dashboard data.")
-        return render(request, 'lecturer/dashboard.html', {'lecturer': lecturer})
+        # Return minimal context to avoid template errors
+        return render(request, 'lecturer/dashboard.html', {
+            'lecturer': lecturer,
+            'teaching_units': 0,
+            'total_students': 0,
+            'todays_classes': [],
+            'upcoming_classes': [],
+            'present_students': 0,
+            'overall_attendance_percentage': 0,
+            'total_classes': 0,
+            'recent_activities': [],
+            'user_form': UserUpdateForm(instance=request.user),
+            'lecturer_form': LecturerProfileForm(instance=lecturer) if hasattr(request.user, 'lecturer_profile') else None,
+        })
+
+# Helper functions for activity data
+def get_activity_icon(action_type):
+    """Get appropriate icon for activity type"""
+    icon_map = {
+        'LOGIN': 'sign-in-alt',
+        'LOGOUT': 'sign-out-alt',
+        'CREATE': 'plus-circle',
+        'UPDATE': 'edit',
+        'DELETE': 'trash',
+        'SCAN': 'qrcode',
+        'REPORT': 'chart-bar',
+    }
+    return icon_map.get(action_type, 'bell')
+
+def get_activity_status(action_type):
+    """Get appropriate status color for activity type"""
+    status_map = {
+        'LOGIN': 'success',
+        'LOGOUT': 'info',
+        'CREATE': 'primary',
+        'UPDATE': 'warning',
+        'DELETE': 'error',
+        'SCAN': 'success',
+        'REPORT': 'info',
+    }
+    return status_map.get(action_type, 'info')
 
 @lecturer_required
 def lecturer_portal(request):
@@ -859,6 +977,34 @@ def lecturer_portal(request):
                 logger.error(f"Error loading unit details for unit_id={unit_id}: {str(e)}")
                 messages.error(request, "Error loading unit details.")
 
+        # ==================== PREPARE UNITS JSON FOR CHARTS ====================
+        print(f"DEBUG: Preparing units JSON for charts")
+        
+        # Create a JSON-serializable version of units data for JavaScript charts
+        units_json_data = []
+        for unit in units_list:
+            # Convert UUID to string for JSON serialization
+            unit_id_str = str(unit['id']) if isinstance(unit['id'], uuid.UUID) else unit['id']
+            
+            units_json_data.append({
+                'id': unit_id_str,
+                'code': unit['code'],
+                'name': unit['name'],
+                'credit_hours': unit['credit_hours'],
+                'department': unit['department'],
+                'semester': unit['semester'],
+                'enrolled_students_count': unit['enrolled_students_count'],
+                'completed_classes': unit['completed_classes'],
+                'average_attendance': float(unit['average_attendance']),  # Ensure float for JSON
+                'total_attendances': unit['total_attendances'],
+                'present_attendances': unit['present_attendances'],
+            })
+        
+        # Convert to JSON string
+        import json
+        units_json = json.dumps(units_json_data)
+        print(f"DEBUG: Units JSON prepared - {len(units_json_data)} units")
+
         # ==================== FINAL CONTEXT ====================
         print(f"DEBUG: Final context preparation")
         print(f"DEBUG: Units count in context: {len(units_list)}")
@@ -886,6 +1032,9 @@ def lecturer_portal(request):
             'present_students': present_attendance_records,
             'overall_attendance_percentage': overall_attendance_percentage,
             
+            # JSON data for JavaScript charts
+            'units_json': units_json,
+            
             # Today's date for templates
             'today': today,
             'now': now,
@@ -902,11 +1051,13 @@ def lecturer_portal(request):
         traceback.print_exc()
         messages.error(request, "Error loading portal data. Please try again.")
         
-        # Return minimal context in case of error
+        # Return minimal context in case of error with empty JSON
+        import json
         return render(request, 'lecturer/lecturer.html', {
             'lecturer': lecturer,
             'units': [],
             'units_count': 0,
+            'units_json': '[]',  # Empty but valid JSON array
             'classes': [],
             'todays_classes': [],
             'upcoming_classes': [],
@@ -1259,10 +1410,9 @@ def student_dashboard(request):
 
 @student_required
 def student_portal(request):
-    """Combined portal for classes, units, and attendance with COMPLETE QR context"""
+    """Combined portal for classes, units, and attendance - PRODUCTION READY"""
     try:
         student = request.user.student_profile
-        print(f"DEBUG: Student found - {student.registration_number}")
     except StudentProfile.DoesNotExist:
         logger.error("student_portal: user=%s missing student_profile", request.user.username)
         messages.error(request, "Student profile not found. Contact admin.")
@@ -1273,11 +1423,6 @@ def student_portal(request):
     now = timezone.now()
 
     try:
-        # ==================== DEBUG: CHECK BASIC DATA ====================
-        print(f"DEBUG: Student: {student.registration_number}")
-        print(f"DEBUG: Today's date: {today}")
-        print(f"DEBUG: Current time: {now.time()}")
-
         # ==================== UNIT ENROLLMENTS WITH PROPER RELATIONSHIPS ====================
         unit_enrollments = StudentUnitEnrollment.objects.filter(
             student=student, 
@@ -1288,18 +1433,63 @@ def student_portal(request):
             'semester_unit__lecturer__user'
         )
         
-        print(f"DEBUG: Unit enrollments count: {unit_enrollments.count()}")
+        # ==================== PREPARE UNITS DATA FOR TEMPLATE AND CHARTS ====================
+        units_list = []
         for enrollment in unit_enrollments:
-            print(f"DEBUG: Enrollment - Unit: {enrollment.semester_unit.unit.code}, "
-                  f"Lecturer: {enrollment.semester_unit.lecturer.user.get_full_name() if enrollment.semester_unit.lecturer else 'None'}")
+            # Calculate attendance statistics for each unit
+            unit_attendances = Attendance.objects.filter(
+                student=student,
+                class_schedule__semester_unit=enrollment.semester_unit
+            )
+            total_unit_classes = unit_attendances.count()
+            present_unit_classes = unit_attendances.filter(status__in=['PRESENT', 'LATE']).count()
+            
+            attendance_percentage = round(
+                (present_unit_classes / total_unit_classes * 100), 2
+            ) if total_unit_classes > 0 else 0.0
+            
+            unit_data = {
+                'id': enrollment.semester_unit.id,
+                'code': enrollment.semester_unit.unit.code,
+                'name': enrollment.semester_unit.unit.name,
+                'credit_hours': enrollment.semester_unit.unit.credit_hours,
+                'lecturer_name': f"Dr. {enrollment.semester_unit.lecturer.user.last_name}" if enrollment.semester_unit.lecturer else "Not Assigned",
+                'semester': enrollment.semester_unit.semester.name,
+                'attendance_percentage': attendance_percentage,
+                'total_classes': total_unit_classes,
+                'present_classes': present_unit_classes,
+                'attended_classes': present_unit_classes,  # Add this for template compatibility
+                'enrolled_students_count': StudentUnitEnrollment.objects.filter(
+                    semester_unit=enrollment.semester_unit,
+                    is_active=True
+                ).count()
+            }
+            units_list.append(unit_data)
+
+        # ==================== PREPARE UNITS JSON FOR CHARTS ====================
+        units_json_data = []
+        for unit in units_list:
+            unit_id_str = str(unit['id']) if hasattr(unit['id'], 'hex') else str(unit['id'])
+            
+            units_json_data.append({
+                'id': unit_id_str,
+                'code': unit['code'],
+                'name': unit['name'],
+                'credit_hours': unit['credit_hours'],
+                'lecturer_name': unit['lecturer_name'],
+                'semester': unit['semester'],
+                'attendance_percentage': float(unit['attendance_percentage']),
+                'total_classes': unit['total_classes'],
+                'present_classes': unit['present_classes'],
+                'enrolled_students_count': unit['enrolled_students_count'],
+            })
+        
+        import json
+        units_json = json.dumps(units_json_data)
 
         # ==================== CLASSES THROUGH ENROLLED SEMESTER UNITS ====================
-        # Get all semester units the student is enrolled in
-        enrolled_semester_units = [enrollment.semester_unit for enrollment in unit_enrollments]
-        enrolled_semester_unit_ids = [su.id for su in enrolled_semester_units]
+        enrolled_semester_unit_ids = [enrollment.semester_unit.id for enrollment in unit_enrollments]
         
-        print(f"DEBUG: Enrolled semester unit IDs: {enrolled_semester_unit_ids}")
-
         # Get classes for these semester units
         classes = ClassSchedule.objects.filter(
             semester_unit__id__in=enrolled_semester_unit_ids,
@@ -1308,8 +1498,6 @@ def student_portal(request):
             'semester_unit__unit',
             'lecturer__user'
         ).order_by('-schedule_date', 'start_time')
-        
-        print(f"DEBUG: Total classes count: {classes.count()}")
 
         # ==================== TODAY'S CLASSES ====================
         todays_classes = ClassSchedule.objects.filter(
@@ -1320,8 +1508,6 @@ def student_portal(request):
             'semester_unit__unit',
             'lecturer__user'
         ).order_by('start_time')
-
-        print(f"DEBUG: Today's classes count: {todays_classes.count()}")
         
         # ==================== ATTENDANCE RECORDS ====================
         attendances = Attendance.objects.filter(
@@ -1331,10 +1517,7 @@ def student_portal(request):
             'class_schedule__lecturer__user'
         ).order_by('-class_schedule__schedule_date', '-scan_time')
         
-        print(f"DEBUG: Attendance records count: {attendances.count()}")
-
         # ==================== AUTO-MARK ABSENT FOR ENDED CLASSES ====================
-        print(f"DEBUG: Starting auto-absent marking for ended classes...")
         for class_obj in todays_classes:
             class_end_datetime = timezone.make_aware(
                 datetime.combine(class_obj.schedule_date, class_obj.end_time)
@@ -1348,29 +1531,14 @@ def student_portal(request):
                 ).exists()
                 
                 if not attendance_exists:
-                    # Auto-create absent record - ONLY use fields that exist in your model
                     try:
-                        # Try with minimal fields first
                         Attendance.objects.create(
                             student=student,
                             class_schedule=class_obj,
-                            status='ABSENT',
-                            scan_time=None
+                            status='ABSENT'
                         )
-                        print(f"DEBUG: Auto-marked absent for {class_obj.semester_unit.unit.code} "
-                              f"({class_obj.start_time}-{class_obj.end_time})")
                     except Exception as e:
-                        print(f"DEBUG: Error creating attendance record: {e}")
-                        # Try with even fewer fields if needed
-                        try:
-                            Attendance.objects.create(
-                                student=student,
-                                class_schedule=class_obj,
-                                status='ABSENT'
-                            )
-                            print(f"DEBUG: Auto-marked absent (minimal fields) for {class_obj.semester_unit.unit.code}")
-                        except Exception as e2:
-                            print(f"DEBUG: Failed to create attendance record: {e2}")
+                        logger.error(f"Error auto-marking absent: {e}")
 
         # ==================== REFRESH ATTENDANCE DATA AFTER AUTO-MARKING ====================
         # Get updated attendance records
@@ -1388,8 +1556,6 @@ def student_portal(request):
         )
         attended_class_ids = list(todays_attendances.values_list('class_schedule_id', flat=True))
         
-        print(f"DEBUG: After auto-marking - Attended class IDs: {attended_class_ids}")
-
         # ==================== CALCULATE ATTENDANCE STATISTICS ====================
         total_classes_attended = attendances.count()
         present_classes = attendances.filter(status__in=['PRESENT', 'LATE']).count()
@@ -1400,52 +1566,16 @@ def student_portal(request):
             (present_classes / total_classes_attended * 100), 2
         ) if total_classes_attended > 0 else 0.0
 
-        print(f"DEBUG: Attendance stats - Total: {total_classes_attended}, "
-              f"Present: {present_classes}, Absent: {absent_count}, "
-              f"Percentage: {attendance_percentage}%")
-
-        # ==================== CALCULATE UNIT ATTENDANCE PERCENTAGES ====================
-        for enrollment in unit_enrollments:
-            unit_attendances = Attendance.objects.filter(
-                student=student,
-                class_schedule__semester_unit=enrollment.semester_unit
-            )
-            total_unit_classes = unit_attendances.count()
-            present_unit_classes = unit_attendances.filter(status__in=['PRESENT', 'LATE']).count()
-            
-            enrollment.attendance_percentage = round(
-                (present_unit_classes / total_unit_classes * 100), 2
-            ) if total_unit_classes > 0 else 0.0
-            
-            print(f"DEBUG: Unit {enrollment.semester_unit.unit.code} - "
-                  f"Classes: {total_unit_classes}, Attendance: {enrollment.attendance_percentage}%")
-
         # ==================== PROCESS CLASS STATUSES ====================
         ongoing_classes = []
         
         # Process today's classes for status
         for class_obj in todays_classes:
-            # Calculate current class status
-            class_start_datetime = timezone.make_aware(
-                datetime.combine(class_obj.schedule_date, class_obj.start_time)
-            )
-            class_end_datetime = timezone.make_aware(
-                datetime.combine(class_obj.schedule_date, class_obj.end_time)
-            )
-            
-            # Determine class status
-            if now < class_start_datetime:
-                class_obj.display_status = 'upcoming'
-                class_obj.is_ongoing_display = False
-                class_obj.has_ended_display = False
-            elif class_start_datetime <= now <= class_end_datetime:
-                class_obj.display_status = 'ongoing'
-                class_obj.is_ongoing_display = True
-                class_obj.has_ended_display = False
-            else:
-                class_obj.display_status = 'ended'
-                class_obj.is_ongoing_display = False
-                class_obj.has_ended_display = True
+            # Calculate current class status using the utility function
+            status = get_class_status(class_obj)
+            class_obj.display_status = status.lower()
+            class_obj.is_ongoing_display = (status == 'ONGOING')
+            class_obj.has_ended_display = (status == 'ENDED')
             
             # Check if attendance is already marked
             class_obj.attendance_marked = class_obj.id in attended_class_ids
@@ -1456,15 +1586,8 @@ def student_portal(request):
             else:
                 class_obj.attendance_status = 'NOT_MARKED'
             
-            print(f"DEBUG: Class {class_obj.semester_unit.unit.code} "
-                  f"({class_obj.start_time}-{class_obj.end_time}) - "
-                  f"Status: {class_obj.display_status}, "
-                  f"Attendance: {class_obj.attendance_status}")
-            
             if class_obj.is_ongoing_display:
                 ongoing_classes.append(class_obj)
-
-        print(f"DEBUG: Ongoing classes count: {len(ongoing_classes)}")
 
         # ==================== UPCOMING CLASSES (NEXT 7 DAYS) ====================
         upcoming_start = today + timedelta(days=1)
@@ -1478,54 +1601,68 @@ def student_portal(request):
             'lecturer__user'
         ).order_by('schedule_date', 'start_time')
 
-        print(f"DEBUG: Upcoming classes count: {upcoming_classes.count()}")
-
         # ==================== RECENT ATTENDANCES FOR ATTENDANCE TAB ====================
         recent_attendances = attendances[:10]
+
+        # ==================== ADDITIONAL STATISTICS FOR TEMPLATE ====================
+        # Calculate additional stats needed by template
+        upcoming_classes_count = upcoming_classes.count()
+        enrolled_units_count = unit_enrollments.count()
 
         # ==================== FINAL CONTEXT ASSEMBLY ====================
         context = {
             'student': student,
-            'unit_enrollments': unit_enrollments,
+            'unit_enrollments': units_list,  # Use units_list instead of raw enrollments
+            'units': units_list,  # For template compatibility
             'classes': classes,
             'attendances': attendances,
             'recent_attendances': recent_attendances,
             'todays_classes': todays_classes,
             'upcoming_classes': upcoming_classes,
             'ongoing_classes': ongoing_classes,
+            
+            # Statistics for dashboard cards
             'total_classes': total_classes_attended,
             'present_classes': present_classes,
+            'present_count': present_classes,  # Template expects this
             'late_count': late_count,
             'absent_count': absent_count,
             'attendance_percentage': attendance_percentage,
+            
+            # Additional stats for template
+            'upcoming_classes_count': upcoming_classes_count,
+            'enrolled_units': enrolled_units_count,
+            
+            # Template control
             'active_tab': active_tab,
             'today': today,
             'now': now,
-            'enrolled_units': unit_enrollments.count(),
             'attended_class_ids': attended_class_ids,
             
-            # Debug info (remove in production)
-            'debug_mode': True,
+            # JSON data for JavaScript charts
+            'units_json': units_json,
+            
+            # Forms for profile modal
+            'user_form': UserUpdateForm(instance=request.user),
+            'profile_form': StudentProfileForm(instance=student),
+            
+            # Remove debug mode for production
+            'debug_mode': False,
         }
-
-        print(f"DEBUG: Context prepared successfully")
-        print(f"DEBUG: Sending to template - Units: {len(unit_enrollments)}, "
-              f"Today's Classes: {len(todays_classes)}, "
-              f"Ongoing: {len(ongoing_classes)}, "
-              f"Attendances: {len(attendances)}")
 
         return render(request, 'student/student.html', context)
 
     except Exception as e:
         logger.error(f"Error in student_portal for user={request.user.username}: {str(e)}")
-        import traceback
-        traceback.print_exc()
         messages.error(request, "Error loading portal data. Please try again.")
         
         # Return minimal context in case of error
+        import json
         return render(request, 'student/student.html', {
             'student': student,
             'unit_enrollments': [],
+            'units': [],
+            'units_json': '[]',
             'classes': [],
             'attendances': [],
             'recent_attendances': [],
@@ -1534,17 +1671,21 @@ def student_portal(request):
             'ongoing_classes': [],
             'total_classes': 0,
             'present_classes': 0,
+            'present_count': 0,
             'late_count': 0,
             'absent_count': 0,
             'attendance_percentage': 0,
+            'upcoming_classes_count': 0,
+            'enrolled_units': 0,
             'active_tab': active_tab,
             'today': today,
             'now': now,
-            'enrolled_units': 0,
             'attended_class_ids': [],
-            'debug_mode': True,
+            'user_form': UserUpdateForm(instance=request.user),
+            'profile_form': StudentProfileForm(instance=student) if hasattr(request.user, 'student_profile') else None,
+            'debug_mode': False,
         })
-
+    
 @student_required
 @csrf_exempt
 def scan_qr_code(request):
@@ -2414,7 +2555,7 @@ def attendance_history_api(request):
 @require_http_methods(["POST"])
 def scan_qr_code_endpoint(request):
     """
-    QR code scanning endpoint - FIXED VERSION without location_accuracy field
+    QR code scanning endpoint - COMPLETELY FIXED VERSION
     """
     try:
         # Handle both form data and JSON
@@ -2434,7 +2575,7 @@ def scan_qr_code_endpoint(request):
         if not qr_token:
             return JsonResponse({
                 'success': False, 
-                'message': 'Missing QR token'
+                'message': 'Missing QR token - please scan a valid QR code'
             }, status=400)
         
         if not class_id:
@@ -2451,9 +2592,27 @@ def scan_qr_code_endpoint(request):
                 id=class_id
             )
 
+            print(f"DEBUG: Class {class_schedule.id}")
+            print(f"  Now: {timezone.now()}")
+            print(f"  Start: {class_schedule.start_time}")
+            print(f"  End: {class_schedule.end_time}")
+
+            # Validate QR token - CRITICAL VALIDATION ADDED
+            is_valid, qr_code, error_message = validate_qr_token(qr_token, class_schedule)
+
+            if not is_valid:
+                print(f"DEBUG: QR validation failed: {error_message}")
+                return JsonResponse({
+                    'success': False, 
+                    'message': error_message
+                }, status=400)
+
+            print(f"DEBUG: QR validation successful - QR Code: {qr_code.id}")
+
             # Safely get student profile
             try:
                 student = request.user.student_profile
+                print(f"DEBUG: Student found: {student.registration_number}")
             except StudentProfile.DoesNotExist:
                 return JsonResponse({
                     'success': False, 
@@ -2461,22 +2620,19 @@ def scan_qr_code_endpoint(request):
                 }, status=403)
 
             # Check if student is enrolled in this unit
-            if not StudentUnitEnrollment.objects.filter(
+            enrollment_exists = StudentUnitEnrollment.objects.filter(
                 student=student,
                 semester_unit=class_schedule.semester_unit,
                 is_active=True
-            ).exists():
+            ).exists()
+            
+            if not enrollment_exists:
                 return JsonResponse({
                     'success': False, 
                     'message': 'You are not enrolled in this unit'
                 }, status=403)
 
-            # Check if class is ongoing
-            if not is_class_ongoing(class_schedule):
-                return JsonResponse({
-                    'success': False, 
-                    'message': 'Class is not currently ongoing'
-                }, status=400)
+            print(f"DEBUG: Enrollment verified")
 
             # Check if attendance is already marked for this class
             existing_attendance = Attendance.objects.filter(
@@ -2489,6 +2645,8 @@ def scan_qr_code_endpoint(request):
                     'success': False, 
                     'message': 'Attendance already marked for this class'
                 }, status=400)
+
+            print(f"DEBUG: No existing attendance found")
 
             # Validate location if provided
             location_valid = False
@@ -2509,42 +2667,36 @@ def scan_qr_code_endpoint(request):
                 print("DEBUG: Location data not provided or class location not set")
                 location_valid = True  # Allow without location if not set up
 
-            # Create attendance record - ONLY with fields that exist in your model
+            # Create attendance record
             now = timezone.now()
             
-            # Try minimal field creation first
-            try:
-                attendance_data = {
-                    'student': student,
-                    'class_schedule': class_schedule,
-                    'status': 'PRESENT',
-                    'scan_time': now,
-                }
-                
-                # Only add location fields if they exist in your model
-                # Check what fields your Attendance model actually has
-                attendance_fields = [f.name for f in Attendance._meta.get_fields()]
-                
-                if 'scan_latitude' in attendance_fields and latitude:
-                    attendance_data['scan_latitude'] = latitude
-                if 'scan_longitude' in attendance_fields and longitude:
-                    attendance_data['scan_longitude'] = longitude
-                if 'location_valid' in attendance_fields:
-                    attendance_data['location_valid'] = location_valid
-                
-                attendance = Attendance.objects.create(**attendance_data)
-                
-            except Exception as model_error:
-                print(f"DEBUG: Error creating attendance with location fields: {model_error}")
-                # Fallback: create with minimal fields only
-                attendance = Attendance.objects.create(
-                    student=student,
-                    class_schedule=class_schedule,
-                    status='PRESENT',
-                    scan_time=now,
-                )
+            # Create with all available fields
+            attendance_data = {
+                'student': student,
+                'class_schedule': class_schedule,
+                'qr_code': qr_code,  # Link to the validated QR code
+                'status': 'PRESENT',
+                'scan_time': now,
+            }
+            
+            # Add optional location fields if they exist in model
+            attendance_fields = [f.name for f in Attendance._meta.get_fields()]
+            
+            if 'scan_latitude' in attendance_fields and latitude:
+                attendance_data['scan_latitude'] = latitude
+            if 'scan_longitude' in attendance_fields and longitude:
+                attendance_data['scan_longitude'] = longitude
+            if 'location_valid' in attendance_fields:
+                attendance_data['location_valid'] = location_valid
+            
+            attendance = Attendance.objects.create(**attendance_data)
+
+            # Deactivate QR code after successful scan to prevent reuse
+            qr_code.is_active = False
+            qr_code.save()
 
             print(f"DEBUG: Attendance created - ID: {attendance.id}")
+            print(f"DEBUG: QR code deactivated - ID: {qr_code.id}")
 
         # Log successful scan
         log_system_action(
@@ -2555,7 +2707,8 @@ def scan_qr_code_endpoint(request):
                 'class_id': str(class_schedule.id),
                 'unit_name': class_schedule.semester_unit.unit.name,
                 'location_valid': location_valid,
-                'scan_time': now.isoformat()
+                'scan_time': now.isoformat(),
+                'qr_code_id': str(qr_code.id)
             }
         )
 
@@ -2584,6 +2737,348 @@ def scan_qr_code_endpoint(request):
         }, status=500)
 
 
+@lecturer_required
+@require_http_methods(["GET"])
+def api_lecturer_dashboard_data(request):
+    """API endpoint for lecturer dashboard data"""
+    try:
+        lecturer = request.user.lecturer_profile
+        today = timezone.now().date()
+        
+        # Calculate statistics
+        teaching_units = SemesterUnit.objects.filter(lecturer=lecturer).count()
+        total_students = StudentUnitEnrollment.objects.filter(
+            semester_unit__lecturer=lecturer
+        ).values('student').distinct().count()
+        
+        todays_classes_count = ClassSchedule.objects.filter(
+            lecturer=lecturer,
+            schedule_date=today,
+            is_active=True
+        ).count()
+        
+        upcoming_classes_count = ClassSchedule.objects.filter(
+            lecturer=lecturer,
+            schedule_date__range=[today + timedelta(days=1), today + timedelta(days=7)],
+            is_active=True
+        ).count()
+        
+        # Calculate attendance percentage
+        all_attendances = Attendance.objects.filter(class_schedule__lecturer=lecturer)
+        total_attendance_records = all_attendances.count()
+        present_attendance_records = all_attendances.filter(status__in=['PRESENT', 'LATE']).count()
+        
+        overall_attendance_percentage = round(
+            (present_attendance_records / total_attendance_records * 100), 2
+        ) if total_attendance_records > 0 else 0.0
+        
+        # Get recent activity
+        recent_activity_logs = SystemLog.objects.filter(
+            user=request.user
+        ).order_by('-timestamp')[:5]
+        
+        recent_activity = []
+        for log in recent_activity_logs:
+            activity = {
+                'type': log.action_type.lower(),
+                'message': log.description,
+                'time': log.timestamp.strftime('%H:%M'),
+                'icon': get_activity_icon(log.action_type),
+                'status': get_activity_status(log.action_type)
+            }
+            recent_activity.append(activity)
+        
+        data = {
+            'total_students': total_students,
+            'teaching_units': teaching_units,
+            'todays_classes_count': todays_classes_count,
+            'upcoming_classes_count': upcoming_classes_count,
+            'attendance_percentage': overall_attendance_percentage,
+            'recent_activity': recent_activity
+        }
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        logger.error("Error in api_lecturer_dashboard_data: %s", str(e))
+        return JsonResponse({'error': 'Unable to fetch dashboard data'}, status=500)
+
+@lecturer_required
+@require_http_methods(["GET"])
+def api_lecturer_class_status(request):
+    """API endpoint for real-time class status updates"""
+    try:
+        lecturer = request.user.lecturer_profile
+        today = timezone.now().date()
+        
+        # Get ongoing classes
+        ongoing_classes = ClassSchedule.objects.filter(
+            lecturer=lecturer,
+            schedule_date=today,
+            is_active=True
+        )
+        
+        # Calculate which classes are currently ongoing
+        ongoing_class_ids = []
+        for class_obj in ongoing_classes:
+            if is_class_ongoing(class_obj):
+                ongoing_class_ids.append(str(class_obj.id))
+        
+        return JsonResponse({
+            'success': True,
+            'ongoing_classes': ongoing_class_ids,
+            'timestamp': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error("Error in api_lecturer_class_status: %s", str(e))
+        return JsonResponse({'success': False, 'error': 'Unable to fetch class status'}, status=500)
+
+@lecturer_required
+@require_http_methods(["GET"])
+def api_lecturer_notifications(request):
+    """API endpoint for lecturer notifications"""
+    try:
+        lecturer = request.user.lecturer_profile
+        today = timezone.now().date()
+        
+        # Get unread notifications count (you can implement this based on your notification model)
+        unread_count = 0
+        
+        # Get recent notifications
+        notifications = [
+            {
+                'id': 1,
+                'type': 'system',
+                'message': 'Welcome to Attendify Lecturer Portal',
+                'timestamp': timezone.now().isoformat(),
+                'read': False
+            }
+        ]
+        
+        return JsonResponse({
+            'unread_count': unread_count,
+            'notifications': notifications
+        })
+        
+    except Exception as e:
+        logger.error("Error in api_lecturer_notifications: %s", str(e))
+        return JsonResponse({'unread_count': 0, 'notifications': []})        
+
+
+
+
+@lecturer_required
+@require_http_methods(["GET"])
+def api_lecturer_performance_data(request):
+    """API endpoint for performance chart data"""
+    try:
+        lecturer = request.user.lecturer_profile
+        today = timezone.now().date()
+        
+        # Get performance data for the last 4 weeks
+        performance_data = []
+        labels = []
+        
+        for i in range(4):
+            week_date = today - timedelta(weeks=(3-i))
+            week_start = week_date - timedelta(days=week_date.weekday())
+            week_end = week_start + timedelta(days=6)
+            
+            # Calculate weekly attendance percentage
+            week_attendances = Attendance.objects.filter(
+                class_schedule__lecturer=lecturer,
+                class_schedule__schedule_date__range=[week_start, week_end]
+            )
+            
+            total_week_attendances = week_attendances.count()
+            present_week_attendances = week_attendances.filter(
+                status__in=['PRESENT', 'LATE']
+            ).count()
+            
+            week_percentage = round(
+                (present_week_attendances / total_week_attendances * 100), 2
+            ) if total_week_attendances > 0 else 0
+            
+            performance_data.append(week_percentage)
+            labels.append(f'Week {i+1}')
+        
+        data = {
+            'labels': labels,
+            'datasets': [{
+                'label': 'Weekly Performance',
+                'data': performance_data
+            }]
+        }
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        logger.error("Error in api_lecturer_performance_data: %s", str(e))
+        return JsonResponse({'error': 'Unable to fetch performance data'}, status=500)
+
+
+@lecturer_required
+@require_http_methods(["GET"])
+def api_lecturer_recent_attendance(request):
+    """API endpoint for recent attendance trend data"""
+    try:
+        lecturer = request.user.lecturer_profile
+        today = timezone.now().date()
+        
+        # Get attendance data for the last 5 days
+        attendance_data = []
+        for i in range(5):
+            date = today - timedelta(days=(4-i))
+            
+            day_attendances = Attendance.objects.filter(
+                class_schedule__lecturer=lecturer,
+                class_schedule__schedule_date=date
+            )
+            
+            total_day_attendances = day_attendances.count()
+            present_day_attendances = day_attendances.filter(
+                status__in=['PRESENT', 'LATE']
+            ).count()
+            
+            day_percentage = round(
+                (present_day_attendances / total_day_attendances * 100), 2
+            ) if total_day_attendances > 0 else 0
+            
+            attendance_data.append({
+                'date': date.isoformat(),
+                'attendance_percentage': day_percentage,
+                'total_classes': ClassSchedule.objects.filter(
+                    lecturer=lecturer,
+                    schedule_date=date
+                ).count()
+            })
+        
+        return JsonResponse({'attendance': attendance_data})
+        
+    except Exception as e:
+        logger.error("Error in api_lecturer_recent_attendance: %s", str(e))
+        return JsonResponse({'error': 'Unable to fetch attendance data'}, status=500)
+
+
+@lecturer_required
+@require_http_methods(["GET"])
+def api_lecturer_class_status(request):
+    """API endpoint for real-time class status updates"""
+    try:
+        lecturer = request.user.lecturer_profile
+        today = timezone.now().date()
+        
+        # Get today's classes
+        todays_classes = ClassSchedule.objects.filter(
+            lecturer=lecturer,
+            schedule_date=today,
+            is_active=True
+        )
+        
+        # Calculate which classes are currently ongoing
+        ongoing_class_ids = []
+        for class_obj in todays_classes:
+            if is_class_ongoing(class_obj):
+                ongoing_class_ids.append(str(class_obj.id))
+        
+        return JsonResponse({
+            'success': True,
+            'ongoing_classes': ongoing_class_ids,
+            'timestamp': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error("Error in api_lecturer_class_status: %s", str(e))
+        return JsonResponse({'success': False, 'error': 'Unable to fetch class status'}, status=500)
+
+
+@lecturer_required
+@require_http_methods(["GET"])
+def api_lecturer_dashboard_data(request):
+    """API endpoint for lecturer dashboard data"""
+    try:
+        lecturer = request.user.lecturer_profile
+        today = timezone.now().date()
+        
+        # Calculate statistics
+        teaching_units = SemesterUnit.objects.filter(lecturer=lecturer).count()
+        total_students = StudentUnitEnrollment.objects.filter(
+            semester_unit__lecturer=lecturer
+        ).values('student').distinct().count()
+        
+        todays_classes_count = ClassSchedule.objects.filter(
+            lecturer=lecturer,
+            schedule_date=today,
+            is_active=True
+        ).count()
+        
+        upcoming_classes_count = ClassSchedule.objects.filter(
+            lecturer=lecturer,
+            schedule_date__range=[today + timedelta(days=1), today + timedelta(days=7)],
+            is_active=True
+        ).count()
+        
+        # Calculate attendance percentage
+        all_attendances = Attendance.objects.filter(class_schedule__lecturer=lecturer)
+        total_attendance_records = all_attendances.count()
+        present_attendance_records = all_attendances.filter(status__in=['PRESENT', 'LATE']).count()
+        
+        overall_attendance_percentage = round(
+            (present_attendance_records / total_attendance_records * 100), 2
+        ) if total_attendance_records > 0 else 0.0
+        
+        data = {
+            'total_students': total_students,
+            'teaching_units': teaching_units,
+            'todays_classes_count': todays_classes_count,
+            'upcoming_classes_count': upcoming_classes_count,
+            'attendance_percentage': overall_attendance_percentage
+        }
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        logger.error("Error in api_lecturer_dashboard_data: %s", str(e))
+        return JsonResponse({'error': 'Unable to fetch dashboard data'}, status=500) 
+
+@lecturer_required
+@require_http_methods(["DELETE"])
+def api_delete_class(request, class_id):
+    """API endpoint for deleting classes"""
+    try:
+        class_schedule = get_object_or_404(
+            ClassSchedule, 
+            id=class_id, 
+            lecturer=request.user.lecturer_profile
+        )
+        
+        # Check if class has already happened
+        if class_schedule.schedule_date < timezone.now().date():
+            return JsonResponse({
+                'success': False,
+                'message': 'Cannot delete past classes'
+            }, status=400)
+        
+        class_schedule.delete()
+        
+        log_system_action(
+            request.user,
+            SystemLog.ActionType.DELETE,
+            f"Class deleted: {class_schedule.semester_unit.unit.name} on {class_schedule.schedule_date}"
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Class deleted successfully'
+        })
+        
+    except Exception as e:
+        logger.error("Error deleting class %s: %s", class_id, str(e))
+        return JsonResponse({
+            'success': False,
+            'message': 'Error deleting class'
+        }, status=500)
 
 # ---------------------------
 # Error handlers

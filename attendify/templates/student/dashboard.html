@@ -1,634 +1,327 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html class="no-js" lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendify | Student Dashboard</title>
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
-    <link rel="icon" href="{% static 'images/attendify_logo.png' %}" type="image/x-icon">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+	<meta charset="utf-8" />
+	<meta http-equiv="x-ua-compatible" content="ie=edge" />
+	<title>STUDENT - ATTENDIFY DASHBOARD</title>
+	<meta name="description" content="Attendify Student Dashboard - Manage attendance efficiently and easily." />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="shortcut icon" type="image/x-icon" href="{% static 'images/attendify_logo.png' %}" />
+	<link rel="stylesheet" href="{% static 'css/bootstrap-5.0.0-beta2.min.css' %}" />
+	<link rel="stylesheet" href="{% static 'css/LineIcons.2.0.css' %}" />
+	<link rel="stylesheet" href="{% static 'css/tiny-slider.css' %}" />
+	<link rel="stylesheet" href="{% static 'css/animate.css' %}" />
+	<link rel="stylesheet" href="{% static 'css/main.css' %}" />
 </head>
-<body>
-    <!-- Profile Modal -->
-    <div id="profileModal" class="modal-overlay">
-        <div class="modal-container">
-            <div class="modal-header">
-                <div class="modal-title">
-                    <i class="fas fa-user-cog"></i>
-                    <h3>Profile Settings</h3>
-                </div>
-                <button class="modal-close" id="closeProfileModal">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="modal-body">
-                <form id="profileForm" method="POST" enctype="multipart/form-data" action="{% url 'profile_edit' %}">
-                    {% csrf_token %}
-                    <div class="form-sections">
-                        <!-- Personal Information Section -->
-                        <div class="form-section">
-                            <div class="section-header">
-                                <i class="fas fa-user"></i>
-                                <h4>Personal Information</h4>
-                            </div>
-                            
-                            <div class="profile-image-section">
-                                <div class="current-avatar">
-                                    <img id="profilePreview" src="{% if user.profile_picture %}{{ user.profile_picture.url }}{% else %}https://ui-avatars.com/api/?name={{ user.first_name }}&background=4f46e5&color=fff&bold=true{% endif %}" alt="Profile Picture">
-                                </div>
-                                <div class="avatar-controls">
-                                    <label for="id_profile_picture" class="btn-secondary">
-                                        <i class="fas fa-upload"></i>
-                                        Upload Image
-                                    </label>
-                                    <input type="file" id="id_profile_picture" name="profile_picture" accept="image/*" style="display: none;">
-                                    <p class="file-info">PNG, JPG up to 5MB</p>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="id_first_name">First Name</label>
-                                <input type="text" id="id_first_name" name="first_name" value="{{ user.first_name }}" class="form-input">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="id_last_name">Last Name</label>
-                                <input type="text" id="id_last_name" name="last_name" value="{{ user.last_name }}" class="form-input">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="id_email">Email Address</label>
-                                <input type="email" id="id_email" name="email" value="{{ user.email }}" class="form-input">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="id_phone_number">Phone Number</label>
-                                <input type="tel" id="id_phone_number" name="phone_number" value="{{ user.phone_number }}" class="form-input">
-                            </div>
-                        </div>
-                        
-                        <!-- Account Security Section -->
-                        <div class="form-section">
-                            <div class="section-header">
-                                <i class="fas fa-shield-alt"></i>
-                                <h4>Account Security</h4>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="id_username">Username</label>
-                                <input type="text" id="id_username" name="username" value="{{ user.username }}" class="form-input" readonly>
-                                <small class="field-note">Username cannot be changed</small>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="id_old_password">Current Password</label>
-                                <input type="password" id="id_old_password" name="old_password" class="form-input">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="id_new_password1">New Password</label>
-                                <input type="password" id="id_new_password1" name="new_password1" class="form-input">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="id_new_password2">Confirm New Password</label>
-                                <input type="password" id="id_new_password2" name="new_password2" class="form-input">
-                            </div>
-                            
-                            <div class="password-strength">
-                                <div class="strength-bar">
-                                    <div class="strength-fill" id="passwordStrength"></div>
-                                </div>
-                                <span class="strength-text" id="passwordText">Password Strength</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Read-only Information Section -->
-                        <div class="form-section">
-                            <div class="section-header">
-                                <i class="fas fa-graduation-cap"></i>
-                                <h4>Academic Information</h4>
-                            </div>
-                            
-                            <div class="read-only-info">
-                                <div class="info-item">
-                                    <span class="info-label">Registration Number</span>
-                                    <span class="info-value">{{ student.registration_number }}</span>
-                                </div>
-                                
-                                <div class="info-item">
-                                    <span class="info-label">Year of Study</span>
-                                    <span class="info-value">{{ student.get_year_of_study_display }}</span>
-                                </div>
-                                
-                                {% if student.enrollments.exists %}
-                                    {% with enrollment=student.enrollments.first %}
-                                        <div class="info-item">
-                                            <span class="info-label">Course</span>
-                                            <span class="info-value">{{ enrollment.course.name }}</span>
-                                        </div>
-                                        
-                                        <div class="info-item">
-                                            <span class="info-label">Enrollment Date</span>
-                                            <span class="info-value">{{ student.enrollment_date|date:"M d, Y" }}</span>
-                                        </div>
-                                    {% endwith %}
-                                {% endif %}
-                                
-                                <div class="info-item">
-                                    <span class="info-label">Account Status</span>
-                                    <span class="info-value status-active">
-                                        <i class="fas fa-check-circle"></i>
-                                        Active
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" id="cancelProfile">
-                            Cancel
-                        </button>
-                        <button type="submit" class="btn-primary">
-                            <i class="fas fa-save"></i>
-                            Save Changes
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Professional Header -->
-    <header class="dashboard-header">
-        <div class="container-fluid">
-            <div class="header-content">
-                <div class="brand-section">
-                    <div class="logo-container">
-                        <div class="logo-icon">
-                            <i class="fas fa-graduation-cap"></i>
-                        </div>
-                        <div class="brand-text">
-                            <h1 class="brand-name">Attendify</h1>
-                            <span class="brand-subtitle">Dashboard</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="header-stats">
-                    <div class="stat-item">
-                        <div class="stat-value">Mark</div>
-                        <div class="stat-label">Attendance</div>
-                    </div>
-                    <div class="stat-divider"></div>
-                    <div class="stat-item">
-                        <div class="stat-value">1</div>
-                        <div class="stat-label">Course</div>
-                    </div>
-                    <div class="stat-divider"></div>
-                    <div class="stat-item">
-                        <div class="stat-value">15</div>
-                        <div class="stat-label">Streak</div>
-                    </div>
-                </div>
-                
-                <div class="user-section">
-                    <div class="user-avatar" id="openProfileModal">
-                        <img src="https://ui-avatars.com/api/?name={{ user.first_name }}&background=4f46e5&color=fff&bold=true" alt="{{ user.last_name }}">
-                    </div>
-                    <div class="user-info">
-                        <div class="user-name">{{ user.first_name }} {{ user.last_name }}</div>
-                        <div class="user-id">{{ student.registration_number }}</div>
-                    </div>
-                    <div class="header-actions">
-                        <a href="{% url 'student_portal' %}" class="action-btn">
-                            <i class="fas fa-external-link-alt"></i>
-                        </a>
-                        <a href="{% url 'logout' %}" class="action-btn logout">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </header>
 
-    <!-- Main Dashboard Content -->
-    <main class="dashboard-main">
-        <div class="container-fluid">
-            <!-- Welcome Section -->
-            <section class="welcome-section">
-                <div class="welcome-content">
-                    <h2>Welcome back, {{ user.first_name }}</h2>
-                    <p>Ready to manage your academic attendance and progress</p>
-                    <div class="welcome-meta">
-                        <span class="meta-item">
-                            <i class="fas fa-clock"></i>
-                            Last login: {{ request.user.last_login|date:"M d, Y H:i" }}
-                        </span>
-                        <span class="meta-item">
-                            <i class="fas fa-shield-alt"></i>
-                            All systems operational
-                        </span>
-                    </div>
-                </div>
-                <div class="welcome-visual">
-                    <div class="status-card">
-                        <div class="status-icon">
-                            <i class="fas fa-qrcode"></i>
-                        </div>
-                        <div class="status-text">
-                            <span>QR System</span>
-                            <small>Active & Ready</small>
-                        </div>
-                    </div>
-                </div>
-            </section>
+<body>	
 
-            <!-- Dashboard Modules -->
-            <section class="modules-section">
-                <div class="section-header">
-                    <h3>Dashboard Modules</h3>
-                    <p>Access your academic tools and features</p>
-                </div>
-                
-                <div class="modules-grid">
-                    <!-- QR Module -->
-                    <div class="module-card">
-                        <div class="module-icon qr">
-                            <i class="fas fa-qrcode"></i>
-                        </div>
-                        <div class="module-content">
-                            <h4>QR Attendance</h4>
-                            <p>Mark attendance using encrypted QR codes with real-time validation</p>
-                            <div class="module-stats">
-                                <div class="stat">
-                                    <span>Speed</span>
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: 95%"></div>
-                                    </div>
-                                </div>
-                                <div class="stat">
-                                    <span>Accuracy</span>
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: 98%"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="module-actions">
-                            <a href="{% url 'student_portal' %}" class="btn-primary">
-                                Access Portal
-                                <i class="fas fa-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <!-- Analytics Module -->
-                    <div class="module-card">
-                        <div class="module-icon analytics">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <div class="module-content">
-                            <h4>Analytics Dashboard</h4>
-                            <p>Track your attendance patterns and academic performance</p>
-                            <div class="data-visual">
-                                <div class="visual-bar" style="height: 80%"></div>
-                                <div class="visual-bar" style="height: 95%"></div>
-                                <div class="visual-bar" style="height: 65%"></div>
-                                <div class="visual-bar" style="height: 90%"></div>
-                                <div class="visual-bar" style="height: 75%"></div>
-                            </div>
-                        </div>
-                        <div class="module-actions">
-                            <a href="{% url 'student_portal' %}" class="btn-primary">
-                                View Analytics
-                                <i class="fas fa-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <!-- Courses Module -->
-                    <div class="module-card">
-                        <div class="module-icon courses">
-                            <i class="fas fa-book"></i>
-                        </div>
-                        <div class="module-content">
-                            <h4>Course Management</h4>
-                            {% if student.enrollments.exists %}
-                                {% with enrollment=student.enrollments.first %}
-                                    <p>Your course <strong>{{ enrollment.course.name }}</strong> with {{ enrolled_units }} active units</p>
-                                    <div class="course-tags">
-                                        <span class="tag">{{ enrolled_units }} Units</span>
-                                        <span class="tag">Active</span>
-                                        <span class="tag">Enrolled</span>
-                                    </div>
-                                {% endwith %}
-                            {% else %}
-                                <p>You are not currently enrolled in any course</p>
-                                <div class="course-tags">
-                                    <span class="tag">No enrollment</span>
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="module-actions">
-                            <a href="{% url 'student_portal' %}" class="btn-primary">
-                                Browse Courses
-                                <i class="fas fa-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <!-- Profile Module -->
-                    <div class="module-card">
-                        <div class="module-icon profile">
-                            <i class="fas fa-user-cog"></i>
-                        </div>
-                        <div class="module-content">
-                            <h4>Profile System</h4>
-                            <p>Manage your personal information and account settings</p>
-                            <div class="security-status">
-                                <i class="fas fa-shield-check"></i>
-                                <span>Security Level: Maximum</span>
-                            </div>
-                        </div>
-                        <div class="module-actions">
-                            <a href="#" class="btn-primary" id="profileModuleLink">
-                                Configure Profile
-                                <i class="fas fa-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </section>
+	<!-- ========================= preloader start ========================= -->
+	<div class="preloader">
+		<div class="loader">
+			<div class="spinner">
+				<div class="spinner-container">
+					<div class="spinner-rotator">
+						<div class="spinner-left">
+							<div class="spinner-circle"></div>
+						</div>
+						<div class="spinner-right">
+							<div class="spinner-circle"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- preloader end -->
 
-            <!-- Activity Feed -->
-            <section class="activity-section">
-                <div class="activity-container">
-                    <div class="activity-header">
-                        <h3>Recent Activity</h3>
-                        <div class="activity-controls">
-                            <span class="online-indicator">
-                                <i class="fas fa-circle"></i> Live
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <div class="activity-feed">
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="fas fa-user-check"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p>User {{ user.username }} authenticated successfully</p>
-                                <span class="activity-time">{{ now|date:"H:i:s" }}</span>
-                            </div>
-                        </div>
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="fas fa-qrcode"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p>QR scanner system initialized and ready</p>
-                                <span class="activity-time">{{ now|date:"H:i:s" }}</span>
-                            </div>
-                        </div>
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p>All security protocols active and running</p>
-                                <span class="activity-time">{{ now|date:"H:i:s" }}</span>
-                            </div>
-                        </div>
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="fas fa-database"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p>Database connection established - courses loaded</p>
-                                <span class="activity-time">{{ now|date:"H:i:s" }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
-            <!-- Quick Actions -->
-            <section class="quick-actions-section">
-                <div class="section-header">
-                    <h3>Quick Actions</h3>
-                    <p>Frequently used features and tools</p>
-                </div>
-                
-                <div class="actions-grid">
-                    <a href="{% url 'student_portal' %}" class="action-card">
-                        <div class="action-icon">
-                            <i class="fas fa-camera"></i>
-                        </div>
-                        <div class="action-content">
-                            <h5>Scan QR Code</h5>
-                            <p>Mark your attendance quickly</p>
-                        </div>
-                        <div class="action-arrow">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </a>
-                    
-                    <a href="{% url 'student_portal' %}" class="action-card">
-                        <div class="action-icon">
-                            <i class="fas fa-calendar-alt"></i>
-                        </div>
-                        <div class="action-content">
-                            <h5>View Schedule</h5>
-                            <p>Check your class timetable</p>
-                        </div>
-                        <div class="action-arrow">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </a>
-                    
-                    <a href="{% url 'student_portal' %}" class="action-card">
-                        <div class="action-icon">
-                            <i class="fas fa-chart-bar"></i>
-                        </div>
-                        <div class="action-content">
-                            <h5>View Analytics</h5>
-                            <p>Track your attendance stats</p>
-                        </div>
-                        <div class="action-arrow">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </a>
-                    
-                    <a href="#" class="action-card" id="profileActionButton">
-                        <div class="action-icon">
-                            <i class="fas fa-user-cog"></i>
-                        </div>
-                        <div class="action-content">
-                            <h5>Profile Settings</h5>
-                            <p>Manage your account</p>
-                        </div>
-                        <div class="action-arrow">
-                            <i class="fas fa-chevron-right"></i>
-                        </div>
-                    </a>
-                </div>
-            </section>
-        </div>
-    </main>
+	<!-- ========================= header start ========================= -->
+	<header class="header">
+		<div class="navbar-area">
+			<div class="container">
+				<div class="row align-items-center">
+					<div class="col-lg-12">
+						<nav class="navbar navbar-expand-lg">
+							<a class="navbar-brand" href="index.html">
+								<img src="{% static 'images/attendify_logo.png'  %}" alt="Logo" />
+							</a>
+							<button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+								data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+								aria-expanded="false" aria-label="Toggle navigation">
+								<span class="toggler-icon"></span>
+								<span class="toggler-icon"></span>
+								<span class="toggler-icon"></span>
+							</button>
 
-    <!-- Footer -->
-    <footer class="dashboard-footer">
-        <div class="container-fluid">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <div class="logo-container small">
-                        <div class="logo-icon">
-                            <i class="fas fa-graduation-cap"></i>
-                        </div>
-                        <div class="brand-text">
-                            <h3 class="brand-name">Attendify</h3>
-                            <span class="brand-subtitle">Student Dashboard</span>
-                        </div>
-                    </div>
-                    <p>Advanced attendance management system</p>
-                </div>
-                
-                <div class="footer-links">
-                    <div class="link-group">
-                        <h4>System</h4>
-                        <a href="{% url 'student_portal' %}">Student Portal</a>
-                        <a href="#" id="footerProfileLink">Profile</a>
-                        <a href="#">Documentation</a>
-                    </div>
-                    
-                    <div class="link-group">
-                        <h4>Support</h4>
-                        <a href="#">Help Center</a>
-                        <a href="#">Status</a>
-                        <a href="#">Contact</a>
-                    </div>
-                </div>
-                
-                <div class="footer-status">
-                    <div class="status-indicator">
-                        <i class="fas fa-server"></i>
-                        <span>All Systems Operational</span>
-                    </div>
-                    <div class="uptime">99.9% Uptime</div>
-                </div>
-            </div>
-            
-            <div class="footer-bottom">
-                <p>&copy; 2025 Attendify Systems | Version 2.0.1</p>
-                <div class="tech-info">
-                    <span>Powered by: Django • WebSocket • AES-256</span>
-                </div>
-            </div>
-        </div>
-    </footer>
+							<div class="collapse navbar-collapse sub-menu-bar" id="navbarSupportedContent">
+								<div class="ms-auto">
+									<ul id="nav" class="navbar-nav ms-auto">
+										<li class="nav-item">
+											<a class="page-scroll active" href="#home">Home</a>
+										</li>
+										<li class="nav-item">
+											<a class="page-scroll" href="#about">About</a>
+										</li>
+										<li class="nav-item">
+											<a class="page-scroll" href="#features">Procedure</a>
+										</li>
+										<li class="nav-item">
+											<a class="" href="{% url 'student_portal' %}">Mark Attendance</a>
+										</li>										
+									</ul>
+								</div>
+							</div>
+							<!-- navbar collapse -->
+							<div class="header-btn">
+								<a href="{% url 'logout' %}" class="main-btn btn-hover">Logout</a>
+							</div>
+						</nav>
+						<!-- navbar -->
+					</div>
+				</div>
+			</div>
+		</div>
+	</header>
+	<!-- ========================= header end ========================= -->
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{% static 'js/dashboard.js' %}"></script>
-    
-    <script>
-        // Profile Modal Functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const profileModal = document.getElementById('profileModal');
-            const openProfileModal = document.getElementById('openProfileModal');
-            const profileModuleLink = document.getElementById('profileModuleLink');
-            const profileActionButton = document.getElementById('profileActionButton');
-            const footerProfileLink = document.getElementById('footerProfileLink');
-            const closeProfileModal = document.getElementById('closeProfileModal');
-            const cancelProfile = document.getElementById('cancelProfile');
-            
-            // Open modal from various elements
-            [openProfileModal, profileModuleLink, profileActionButton, footerProfileLink].forEach(element => {
-                if (element) {
-                    element.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        profileModal.classList.add('active');
-                        document.body.style.overflow = 'hidden';
-                    });
-                }
-            });
-            
-            // Close modal
-            [closeProfileModal, cancelProfile].forEach(element => {
-                if (element) {
-                    element.addEventListener('click', function() {
-                        profileModal.classList.remove('active');
-                        document.body.style.overflow = 'auto';
-                    });
-                }
-            });
-            
-            // Close modal when clicking outside content
-            profileModal.addEventListener('click', function(e) {
-                if (e.target === profileModal) {
-                    profileModal.classList.remove('active');
-                    document.body.style.overflow = 'auto';
-                }
-            });
-            
-            // Profile picture preview
-            const profilePictureInput = document.getElementById('id_profile_picture');
-            const profilePreview = document.getElementById('profilePreview');
-            
-            if (profilePictureInput && profilePreview) {
-                profilePictureInput.addEventListener('change', function() {
-                    if (this.files && this.files[0]) {
-                        const reader = new FileReader();
-                        
-                        reader.onload = function(e) {
-                            profilePreview.src = e.target.result;
-                        }
-                        
-                        reader.readAsDataURL(this.files[0]);
-                    }
-                });
-            }
-            
-            // Password strength indicator
-            const passwordInput1 = document.getElementById('id_new_password1');
-            const passwordStrength = document.getElementById('passwordStrength');
-            const passwordText = document.getElementById('passwordText');
-            
-            if (passwordInput1 && passwordStrength && passwordText) {
-                passwordInput1.addEventListener('input', function() {
-                    const password = this.value;
-                    let strength = 0;
-                    let text = 'Weak';
-                    let color = '#ef4444';
-                    
-                    if (password.length >= 8) strength += 25;
-                    if (/[A-Z]/.test(password)) strength += 25;
-                    if (/[0-9]/.test(password)) strength += 25;
-                    if (/[^A-Za-z0-9]/.test(password)) strength += 25;
-                    
-                    if (strength >= 75) {
-                        text = 'Strong';
-                        color = '#10b981';
-                    } else if (strength >= 50) {
-                        text = 'Medium';
-                        color = '#f59e0b';
-                    }
-                    
-                    passwordStrength.style.width = strength + '%';
-                    passwordStrength.style.backgroundColor = color;
-                    passwordText.textContent = text;
-                    passwordText.style.color = color;
-                });
-            }
-        });
-    </script>
+	<!-- ========================= hero-section start ========================= -->
+	<section id="home" class="hero-section">
+		<div class="container">
+			<div class="row align-items-center">
+				<div class="col-xl-6 col-lg-6 col-md-10">
+					<div class="hero-content">
+						<div class="user-info">							
+						</div>
+						<h1>Welcome {{ user.first_name }} {{ user.last_name }}</h1>
+						<p>Revolutionizing classroom attendance by ensuring accuracy, credibility, and accountability, 
+							making it easier for students and teachers to focus on learning and teaching.
+						</p>
+						<a href="{% url 'student_portal' %}" class="main-btn btn-hover">Get Started</a>
+					</div>
+				</div>
+				<div class="col-xxl-6 col-xl-6 col-lg-6">
+					<div class="hero-image text-center text-lg-end">
+						<img src="{% static 'images/attendify_logo.png'  %}" alt="Attendify Logo">
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+	<!-- ========================= hero-section end ========================= -->
+
+	<!-- ========================= about-section start ========================= -->
+	<section id="about" class="about-section">
+		<div class="container">
+			<div class="row">
+				<div class="col-lg-6 order-last order-lg-first">
+					<div class="about-image">
+						<img src="{% static 'images/attendify_logo.png'  %}" alt="About Attendify">
+					</div>
+				</div>
+				<div class="col-lg-6">
+					<div class="about-content-wrapper">
+						<div class="section-title">
+							<h2 class="mb-20">A Smart Solution for Modern Education</h2>
+							<p class="mb-30">Attendify provides an easy and efficient way to manage student attendance. 
+								It bridges the gap between teachers and learners by offering reliable records, instant access, 
+								and a user-friendly interface designed for institutions of all sizes.
+							</p>
+							<a href="#features" class="main-btn btn-hover border-btn">Discover More</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+	<!-- ========================= about-section end ========================= -->
+
+	<!-- ========================= procedure-section start ========================= -->
+	<section id="features" class="feature-section">
+		<div class="container">
+			<div class="row">
+				<div class="col-lg-5 col-md-10">
+					<div class="section-title mb-60">
+						<h2 class="mb-20">Procedure for Marking Attendance</h2>
+						<p>Follow these simple steps to successfully mark your class attendance using Attendify.</p>
+					</div>
+				</div>
+
+				<div class="col-lg-7">
+					<div class="row">
+						<div class="col-lg-6 col-md-6">
+							<div class="single-feature">
+								<div class="feature-icon">
+									<i class="lni lni-user"></i>
+								</div>
+								<div class="feature-content">
+									<h4>Step 1: Login</h4>
+									<p>Use your registered student account to log in to the Attendify portal securely.</p>
+								</div>
+							</div>
+						</div>
+
+						<div class="col-lg-6 col-md-6">
+							<div class="single-feature">
+								<div class="feature-icon">
+									<i class="lni lni-checkmark-circle"></i>
+								</div>
+								<div class="feature-content">
+									<h4>Step 2: Access Attendance</h4>
+									<p>Once logged in, click on the “Mark Attendance” tab to open your attendance page.</p>
+								</div>
+							</div>
+						</div>
+
+						<div class="col-lg-6 col-md-6">
+							<div class="single-feature">
+								<div class="feature-icon">
+									<i class="lni lni-map-marker"></i>
+								</div>
+								<div class="feature-content">
+									<h4>Step 3: Confirm Location</h4>
+									<p>Ensure you are within the classroom or the allowed attendance zone before marking.</p>
+								</div>
+							</div>
+						</div>
+
+						<div class="col-lg-6 col-md-6">
+							<div class="single-feature">
+								<div class="feature-icon">
+									<i class="lni lni-pointer-up"></i>
+								</div>
+								<div class="feature-content">
+									<h4>Step 4: Mark Attendance</h4>
+									<p>Click the “Mark Attendance” button to submit your attendance instantly.</p>
+								</div>
+							</div>
+						</div>
+
+						<div class="col-lg-6 col-md-6">
+							<div class="single-feature">
+								<div class="feature-icon">
+									<i class="lni lni-check-box"></i>
+								</div>
+								<div class="feature-content">
+									<h4>Step 5: Verify Status</h4>
+									<p>After submission, confirm that your attendance has been successfully recorded.</p>
+								</div>
+							</div>
+						</div>
+
+						<div class="col-lg-6 col-md-6">
+							<div class="single-feature">
+								<div class="feature-icon">
+									<i class="lni lni-stats-up"></i>
+								</div>
+								<div class="feature-content">
+									<h4>Step 6: Track Records</h4>
+									<p>You can view your attendance history anytime from your student dashboard.</p>
+								</div>
+							</div>
+						</div>
+
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+	<!-- ========================= procedure-section end ========================= -->
+
+	<!-- ========================= cta-section start ========================= -->
+	<section id="cta" class="cta-section pt-130 pb-100">
+		<div class="container">
+			<div class="row align-items-center">
+				<div class="col-lg-6 col-md-10">
+					<div class="cta-content-wrapper">
+						<div class="section-title">
+							<h2 class="mb-20">Quick & Easy to Use</h2>
+							<p class="mb-30">Attendify offers a fast, easy-to-navigate dashboard that saves time and improves classroom productivity. 
+								Take control of your attendance process with just a few clicks.</p>
+							<a href="{% url 'student_portal' %}" class="main-btn btn-hover border-btn">Try It Now</a>
+						</div>
+					</div>
+				</div>
+				<div class="col-lg-6">
+					<div class="cta-image text-lg-end">
+						<img src="{% static 'images/attendify_logo.png'  %}" alt="Attendify Dashboard">
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+	<!-- ========================= cta-section end ========================= -->
+
+	<!-- ========================= footer start ========================= -->
+	<footer class="footer pt-120">
+		<div class="container">
+			<div class="row">
+				<div class="col-xl-3 col-lg-4 col-md-6 col-sm-10">
+					<div class="footer-widget">
+						<div class="logo">
+							<a href="index.html">
+								<img src="{% static 'images/attendify_logo.png'  %}" alt="logo" class="rounded-circle" style="width: 50%; height: 50%;">
+							</a>
+						</div>
+						<p class="desc">Attendify is designed to simplify attendance management for educational institutions through innovation and technology.</p>
+						<ul class="social-links">
+							<li><a href="#"><i class="lni lni-facebook"></i></a></li>
+							<li><a href="#"><i class="lni lni-linkedin"></i></a></li>
+							<li><a href="#"><i class="lni lni-instagram"></i></a></li>
+							<li><a href="#"><i class="lni lni-twitter"></i></a></li>
+						</ul>
+						© All rights reserved by <a href="#" target="_blank">Attendify</a> | Distributed by <a href="#" target="_blank">WanjalaTech</a>
+					</div>
+				</div>
+				<div class="col-xl-2 col-lg-2 col-md-6 col-sm-6 offset-xl-1">
+					<div class="footer-widget">
+						<h3>About Us</h3>
+						<ul class="links">
+							<li><a href="#home">Home</a></li>
+							<li><a href="#about">About</a></li>
+							<li><a href="#features">Procedure</a></li>						
+							<li><a href="#">Contact</a></li>
+						</ul>
+					</div>
+				</div>
+				<div class="col-xl-3 col-lg-2 col-md-6 col-sm-6">
+					<div class="footer-widget">
+						<h3>Quick Links</h3>
+						<ul class="links">
+							<li><a href="#">Login</a></li>
+							<li><a href="#">Mark Attendance</a></li>
+							<li><a href="#">Dashboard</a></li>
+							<li><a href="#">Support</a></li>
+						</ul>
+					</div>
+				</div>
+				<div class="col-xl-3 col-lg-4 col-md-6">
+					<div class="footer-widget">
+						<h3>Subscribe to Our Newsletter</h3>
+						<form action="#">
+							<input type="email" placeholder="Email">
+							<button class="main-btn btn-hover">Subscribe</button>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	</footer>
+	<!-- ========================= footer end ========================= -->
+
+	<!-- ========================= scroll-top ========================= -->
+	<a href="#" class="scroll-top btn-hover">
+		<i class="lni lni-chevron-up"></i>
+	</a>
+
+	<!-- ========================= JS here ========================= -->
+	<script src="{% static 'js/bootstrap-5.0.0-beta2.min.js' %}"></script>
+	<script src="{% static 'js/tiny-slider.js' %}"></script>
+	<script src="{% static 'js/wow.min.js' %}"></script>
+	<script src="{% static 'js/polyfill.js' %}"></script>
+	<script src="{% static 'js/main.js' %}"></script>
 </body>
+
 </html>
