@@ -37,6 +37,9 @@ urlpatterns = [
     path("profile/", views.profile_view, name="profile"),
     path("profile/edit/", views.profile_edit, name="profile_edit"),
 
+     path('api/student/attendance-stats/', views.api_student_attendance_stats, name='api_student_attendance_stats'),
+    path('api/student/recent-attendance/', views.api_student_recent_attendance, name='api_student_recent_attendance'),
+
     path("dashboard/", views.dashboard_redirect, name="dashboard_redirect"),
 
     # -------------------------------------------------------------------
@@ -70,9 +73,12 @@ urlpatterns = [
     path("admin/assignments/", views.assign_unit_lecturer, name="assign_unit_lecturer"),
     path("admin/system-logs/", views.system_logs, name="system_logs"),
 
+    path("profile/", views.profile_page, name="profile_page"),
+
+
    
     path("api/system-stats/", views.api_system_stats, name="api_system_stats"),
-    path("api/scan-qr/", views.scan_qr_code, name="scan_qr_code"),
+    # path("api/scan-qr/", views.scan_qr_code, name="scan_qr_code"),
     path("api/student/<uuid:student_id>/attendance/", views.api_student_attendance, name="api_student_attendance"),
     
     # Class attendance - FIXED: Using string instead of UUID to match JavaScript

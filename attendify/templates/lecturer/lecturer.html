@@ -397,11 +397,75 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* QR Code Display */
+        .qr-code-container {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .qr-token-display {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .copy-token-btn {
+            margin-top: 10px;
+        }
+
+        /* Location Button */
+        .get-location-btn {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .get-location-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .get-location-btn:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .toast {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
     </style>
 </head>
 <body>
     <!-- Matrix Background Canvas -->
     <canvas id="matrixCanvas"></canvas>
+    
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
     
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay">
@@ -600,7 +664,7 @@
                                 <h3><i class="fas fa-calendar-plus"></i> Schedule New Class</h3>
                             </div>
                             <div class="card-body">
-                                <form id="schedule-class-form" method="POST" action="{% url 'schedule_class' %}">
+                                <form id="schedule-class-form" method="POST" action="{% url 'api_schedule_class' %}">
                                     {% csrf_token %}
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
@@ -639,6 +703,14 @@
                                     <!-- Location Coordinates -->
                                     <div class="mb-3">
                                         <label class="form-label">Location Coordinates (Optional)</label>
+                                        <div class="d-flex gap-2 mb-2">
+                                            <button type="button" class="get-location-btn" id="getCurrentLocation">
+                                                <i class="fas fa-location-arrow me-2"></i>Get Current Location
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" id="clearLocation">
+                                                <i class="fas fa-times me-2"></i>Clear
+                                            </button>
+                                        </div>
                                         <div class="row">
                                             <div class="col-md-6 mb-2">
                                                 <input type="number" step="any" name="latitude" id="latitude" class="form-control" placeholder="Latitude">
@@ -652,7 +724,7 @@
                                                 <input type="number" name="location_radius" id="location_radius" class="form-control" value="100" min="10" max="500" placeholder="Location Radius (meters)">
                                             </div>
                                         </div>
-                                        <small class="text-muted">Location validation for QR code scanning</small>
+                                        <small class="text-muted">Location validation for QR code scanning. Students must be within this radius to mark attendance.</small>
                                     </div>
                                     
                                     <div class="mb-3">
@@ -1055,6 +1127,10 @@
                 <div class="modal-body text-center">
                     <div id="modal-qr-code" class="mb-3"></div>
                     <h6 id="qr-class-info" class="mb-2"></h6>
+                    <div class="qr-token-display">
+                        <small class="text-muted">Token:</small>
+                        <div id="qr-token-text" class="fw-bold"></div>
+                    </div>
                     <p class="text-muted" id="qr-expiry-info">This QR code will expire in 5 minutes</p>
                     <div class="alert alert-info mt-3">
                         <i class="fas fa-info-circle me-2"></i>
@@ -1063,6 +1139,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success copy-token-btn" id="copy-token-btn">
+                        <i class="fas fa-copy me-2"></i>Copy Token
+                    </button>
                     <button type="button" class="btn btn-primary" id="download-modal-qr">
                         <i class="fas fa-download me-2"></i>Download QR
                     </button>
@@ -1102,7 +1181,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'js/qrcode.min.js' %}"></script>
     
-   <script>
+    <script>
     // Global state
     let dashboardData = {
         totalStudents: {{ total_students }},
@@ -1112,6 +1191,9 @@
         attendancePercentage: {{ overall_attendance_percentage }},
         recentActivity: []
     };
+
+    // Current QR data for download/copy
+    let currentQRData = null;
 
     // Initialize everything when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
@@ -1771,8 +1853,8 @@
         const scheduleForm = document.getElementById('schedule-class-form');
         if (scheduleForm) {
             scheduleForm.addEventListener('submit', function(e) {
-                // Show loading state
-                showFormLoading(this);
+                e.preventDefault();
+                submitScheduleForm(this);
             });
         }
         
@@ -1784,6 +1866,17 @@
                 showDeleteConfirmation(classId);
             });
         });
+        
+        // Initialize location buttons
+        const getLocationBtn = document.getElementById('getCurrentLocation');
+        if (getLocationBtn) {
+            getLocationBtn.addEventListener('click', getCurrentLocation);
+        }
+        
+        const clearLocationBtn = document.getElementById('clearLocation');
+        if (clearLocationBtn) {
+            clearLocationBtn.addEventListener('click', clearLocation);
+        }
     }
 
     // Modal functionality
@@ -1808,6 +1901,12 @@
         if (downloadQrBtn) {
             downloadQrBtn.addEventListener('click', downloadQRCode);
         }
+        
+        // Copy token button
+        const copyTokenBtn = document.getElementById('copy-token-btn');
+        if (copyTokenBtn) {
+            copyTokenBtn.addEventListener('click', copyQRToken);
+        }
     }
 
     function showDeleteConfirmation(classId) {
@@ -1825,7 +1924,7 @@
         showLoadingSpinner();
         
         try {
-            const response = await fetch(`/api/generate-qr/${classId}/`, {
+            const response = await fetch(`/lecturer/generate-qr/${classId}/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCSRFToken(),
@@ -1848,20 +1947,30 @@
         }
     }
 
-    // Show QR Code Modal
+    // Show QR Code Modal with complete data
     function showQRCodeModal(qrData) {
         const modal = new bootstrap.Modal(document.getElementById('qrCodeModal'));
         const qrImage = document.getElementById('modal-qr-code');
         const qrClassInfo = document.getElementById('qr-class-info');
         const qrExpiryInfo = document.getElementById('qr-expiry-info');
+        const qrTokenText = document.getElementById('qr-token-text');
+        
+        // Store current QR data for download/copy
+        currentQRData = qrData;
         
         if (qrImage) {
             // Clear previous QR code
             qrImage.innerHTML = '';
             
-            // Generate new QR code
+            // Generate QR code with proper data structure matching backend
+            const qrPayload = {
+                token: qrData.token,
+                class_id: qrData.class_id || qrData.classId,
+                expires_at: qrData.expires_at || qrData.expiresAt
+            };
+            
             new QRCode(qrImage, {
-                text: qrData.qr_data || `CLASS_${qrData.class_id}`,
+                text: JSON.stringify(qrPayload),
                 width: 200,
                 height: 200,
                 colorDark: "#000000",
@@ -1874,11 +1983,165 @@
             qrClassInfo.textContent = qrData.class_name || 'Class Session';
         }
         
+        if (qrTokenText && qrData.token) {
+            qrTokenText.textContent = qrData.token;
+        }
+        
         if (qrExpiryInfo) {
-            qrExpiryInfo.textContent = `Expires in ${qrData.expires_in || '5 minutes'}`;
+            const expiryTime = qrData.expires_at || qrData.expiresAt;
+            if (expiryTime) {
+                const expiryDate = new Date(expiryTime);
+                const now = new Date();
+                const minutesLeft = Math.round((expiryDate - now) / (1000 * 60));
+                qrExpiryInfo.textContent = `This QR code will expire in ${minutesLeft} minutes`;
+            } else {
+                qrExpiryInfo.textContent = 'This QR code will expire in 5 minutes';
+            }
         }
         
         modal.show();
+    }
+
+    // Copy QR Token to Clipboard
+    function copyQRToken() {
+        if (!currentQRData || !currentQRData.token) {
+            showNotification('No token available to copy', 'error');
+            return;
+        }
+        
+        navigator.clipboard.writeText(currentQRData.token).then(() => {
+            showNotification('QR token copied to clipboard!', 'success');
+        }).catch(err => {
+            console.error('Failed to copy token: ', err);
+            showNotification('Failed to copy token', 'error');
+        });
+    }
+
+    // Download QR Code as PNG
+    function downloadQRCode() {
+        if (!currentQRData) {
+            showNotification('No QR code available to download', 'error');
+            return;
+        }
+        
+        const qrImage = document.querySelector('#modal-qr-code canvas');
+        if (!qrImage) {
+            showNotification('QR code not found', 'error');
+            return;
+        }
+        
+        try {
+            const link = document.createElement('a');
+            link.download = `qr-code-${currentQRData.class_name || 'class'}-${new Date().getTime()}.png`;
+            link.href = qrImage.toDataURL('image/png');
+            link.click();
+            showNotification('QR code downloaded successfully!', 'success');
+        } catch (error) {
+            console.error('Error downloading QR code:', error);
+            showNotification('Error downloading QR code', 'error');
+        }
+    }
+
+    // Get Current Location for Class Scheduling
+    function getCurrentLocation() {
+        const locationBtn = document.getElementById('getCurrentLocation');
+        const latitudeInput = document.getElementById('latitude');
+        const longitudeInput = document.getElementById('longitude');
+        
+        if (!navigator.geolocation) {
+            showNotification('Geolocation is not supported by this browser', 'error');
+            return;
+        }
+        
+        // Show loading state
+        locationBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Getting Location...';
+        locationBtn.disabled = true;
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                
+                latitudeInput.value = lat.toFixed(6);
+                longitudeInput.value = lng.toFixed(6);
+                
+                // Reset button
+                locationBtn.innerHTML = '<i class="fas fa-location-arrow me-2"></i>Get Current Location';
+                locationBtn.disabled = false;
+                
+                showNotification('Location obtained successfully!', 'success');
+            },
+            function(error) {
+                let errorMessage = 'Unable to retrieve your location';
+                
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Location access denied. Please enable location permissions.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Location information unavailable.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Location request timed out.';
+                        break;
+                }
+                
+                // Reset button
+                locationBtn.innerHTML = '<i class="fas fa-location-arrow me-2"></i>Get Current Location';
+                locationBtn.disabled = false;
+                
+                showNotification(errorMessage, 'error');
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
+            }
+        );
+    }
+
+    // Clear location coordinates
+    function clearLocation() {
+        document.getElementById('latitude').value = '';
+        document.getElementById('longitude').value = '';
+        showNotification('Location coordinates cleared', 'info');
+    }
+
+    // Submit schedule form via AJAX
+    async function submitScheduleForm(form) {
+        showLoadingSpinner();
+        
+        try {
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Class scheduled successfully!', 'success');
+                form.reset();
+                // Reload the page to show new class
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                throw new Error(result.message || 'Failed to schedule class');
+            }
+        } catch (error) {
+            console.error('Error scheduling class:', error);
+            showNotification(error.message || 'Error scheduling class. Please try again.', 'error');
+        } finally {
+            hideLoadingSpinner();
+        }
     }
 
     // Delete class function
@@ -1916,11 +2179,6 @@
         }
     }
 
-    function downloadQRCode() {
-        // Implement QR code download functionality
-        showNotification('QR code download feature coming soon!', 'info');
-    }
-
     // Show Loading Spinner
     function showLoadingSpinner() {
         const spinner = document.getElementById('loading-overlay');
@@ -1934,21 +2192,6 @@
         if (spinner) {
             spinner.style.display = 'none';
         }
-    }
-
-    // Show form loading state
-    function showFormLoading(form) {
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
-        submitBtn.disabled = true;
-        
-        // Re-enable after a timeout (form submission will reload the page)
-        setTimeout(() => {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        }, 5000);
     }
 
     // Real-time clock in header
@@ -1980,28 +2223,48 @@
         `;
     }
 
-    // Notification system
+    // Enhanced Notification system
     function showNotification(message, type = 'success') {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-        notification.innerHTML = `
-            <div class="d-flex align-items-center">
-                <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'info' ? 'info-circle' : 'check-circle'} me-2"></i>
-                <span>${message}</span>
+        const toastContainer = document.querySelector('.toast-container');
+        const toastId = 'toast-' + Date.now();
+        
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        toast.id = toastId;
+        
+        const icons = {
+            success: 'check-circle',
+            error: 'exclamation-triangle',
+            warning: 'exclamation-circle',
+            info: 'info-circle'
+        };
+        
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center">
+                    <i class="fas fa-${icons[type] || 'info-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         
-        document.body.appendChild(notification);
+        toastContainer.appendChild(toast);
         
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
-        }, 5000);
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: 5000
+        });
+        
+        bsToast.show();
+        
+        // Remove from DOM after hide
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
     }
 
     // Real-time updates

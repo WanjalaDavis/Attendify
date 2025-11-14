@@ -1,29 +1,982 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance - Report</title>
+    <title>Attendance Management - Attendify</title>
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="{% static 'css/lecturer_dashboard.css' %}">
+    <link rel="icon" href="{% static 'images/attendify_logo.png' %}" type="image/x-icon">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <!-- AOS Library for Scroll Animations -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 </head>
 <body>
-    <h1>Attendance Report for {{ class_session.unit.name }}</h1>
-    <p>Date: {{ class_session.date }}</p>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Student Name</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for record in attendance_records %}
-            <tr>
-                <td>{{ record.student.first_name }} {{ record.student.last_name }}</td>
-                <td>{{ record.status }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- Matrix Background Canvas -->
+    <canvas id="matrixCanvas"></canvas>
     
+    <!-- Cyber Grid Overlay -->
+    <div class="cyber-grid"></div>
+    
+    <!-- Navigation Header -->
+    <header class="dashboard-header">
+        <div class="header-container">
+            <div class="brand-section">
+                <div class="logo">
+                    <div class="cyber-logo">
+                        <i class="fas fa-clipboard-check"></i>
+                        <div class="glow-effect"></div>
+                    </div>
+                    <span class="brand-name">ATTENDIFY</span>
+                </div>
+                <h1 class="dashboard-title">ATTENDANCE MANAGEMENT</h1>
+            </div>
+            
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" alt="Profile">
+                        {% else %}
+                            <i class="fas fa-user-circle"></i>
+                        {% endif %}
+                        <div class="avatar-glow"></div>
+                    </div>
+                    <div class="user-details">
+                        <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+                        <span class="user-role">LECTURER</span>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <!-- Real-time Clock -->
+                    <div class="header-clock" id="headerClock"></div>
+                    
+                    <button class="btn-notification" id="notificationBtn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationCount">0</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn-profile-dropdown">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu cyber-dropdown">
+                            <a href="{% url 'profile_edit' %}" class="dropdown-item">
+                                <i class="fas fa-user-edit"></i>EDIT PROFILE
+                            </a>
+                            <a href="{% url 'change_password' %}" class="dropdown-item">
+                                <i class="fas fa-key"></i>CHANGE PASSWORD
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a href="{% url 'logout' %}" class="dropdown-item logout">
+                                <i class="fas fa-sign-out-alt"></i>LOGOUT
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Layout -->
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <a href="{% url 'lecturer_dashboard' %}" class="nav-item">
+                    <div class="nav-icon">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <div class="nav-glow"></div>
+                    </div>
+                    <span>DASHBOARD</span>
+                    <div class="nav-indicator"></div>
+                </a>
+                <a href="{% url 'lecturer_portal' %}" class="nav-item">
+                    <div class="nav-icon">
+                        <i class="fas fa-book-open"></i>
+                        <div class="nav-glow"></div>
+                    </div>
+                    <span>TEACHING PORTAL</span>
+                    <div class="nav-indicator"></div>
+                </a>
+                <a href="{% url 'lecturer_attendance' %}" class="nav-item active">
+                    <div class="nav-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                        <div class="nav-glow"></div>
+                    </div>
+                    <span>ATTENDANCE</span>
+                    <div class="nav-indicator"></div>
+                </a>
+                <a href="{% url 'profile_edit' %}" class="nav-item">
+                    <div class="nav-icon">
+                        <i class="fas fa-user-cog"></i>
+                        <div class="nav-glow"></div>
+                    </div>
+                    <span>PROFILE</span>
+                    <div class="nav-indicator"></div>
+                </a>
+                
+                <div class="nav-divider"></div>
+                <a href="#" class="nav-item" onclick="showTutorial()">
+                    <div class="nav-icon">
+                        <i class="fas fa-question-circle"></i>
+                        <div class="nav-glow"></div>
+                    </div>
+                    <span>HELP & SUPPORT</span>
+                    <div class="nav-indicator"></div>
+                </a>
+            </nav>
+
+            <!-- Quick Stats Sidebar -->
+            <div class="sidebar-stats">
+                <div class="stat-card mini cyber-stat">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value">{{ total_students|default:"0" }}</span>
+                        <span class="stat-label" id="totalStudentsCount">TOTAL STUDENTS</span>
+                    </div>
+                </div>
+                <div class="stat-card mini cyber-stat">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-check"></i>
+                        <div class="icon-glow"></div>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value">{{ todays_classes|length }}</span>
+                        <span class="stat-label">TODAY'S CLASSES</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Attendance Header -->
+            <section class="welcome-section">
+                <div class="welcome-card cyber-card">
+                    <div class="card-glow"></div>
+                    <div class="welcome-content">
+                        <h2>ATTENDANCE MANAGEMENT <span class="cyber-text">PORTAL</span></h2>
+                        <p class="welcome-text">Manage student attendance and generate comprehensive reports</p>
+                    </div>
+                    <div class="welcome-graphic">
+                        <div class="cyber-graphic">
+                            <i class="fas fa-chart-bar"></i>
+                            <div class="graphic-glow"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab Navigation -->
+            <section class="tab-navigation">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-tab="manual">MANUAL ATTENDANCE</button>
+                    <button class="tab-btn" data-tab="reports">ATTENDANCE REPORTS</button>
+                    <button class="tab-btn" data-tab="analytics">ANALYTICS</button>
+                </div>
+            </section>
+
+            <!-- Manual Attendance Tab -->
+            <div class="tab-content active" id="manual-tab">
+                <section class="content-grid">
+                    <div class="content-card cyber-card">
+                        <div class="card-glow"></div>
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-user-edit"></i>
+                                MANUAL ATTENDANCE MARKING
+                            </h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="manual-attendance-controls">
+                                <div class="form-group">
+                                    <label for="classSelect">SELECT CLASS</label>
+                                    <select id="classSelect" class="cyber-select" onchange="loadClassStudents(this.value)">
+                                        <option value="">-- Choose a Class --</option>
+                                        {% for class in all_classes %}
+                                        <option value="{{ class.id }}">
+                                            {{ class.semester_unit.unit.code }} - {{ class.schedule_date|date:"M d" }} {{ class.start_time|time:"H:i" }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div id="attendanceMarkingArea" style="display: none;">
+                                    <div class="attendance-header">
+                                        <h4 id="selectedClassName">Class Name</h4>
+                                        <div class="attendance-actions">
+                                            <button class="btn-sm btn-primary cyber-btn" onclick="markAllPresent()">
+                                                MARK ALL PRESENT
+                                            </button>
+                                            <button class="btn-sm btn-secondary cyber-btn" onclick="saveManualAttendance()">
+                                                SAVE ATTENDANCE
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="students-list" id="studentsList">
+                                        <!-- Students will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Reports Tab -->
+            <div class="tab-content" id="reports-tab">
+                <section class="content-grid">
+                    <div class="content-card cyber-card">
+                        <div class="card-glow"></div>
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-file-export"></i>
+                                ATTENDANCE REPORTS
+                            </h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="reports-controls">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="reportType">REPORT TYPE</label>
+                                        <select id="reportType" class="cyber-select">
+                                            <option value="daily">Daily Report</option>
+                                            <option value="weekly">Weekly Report</option>
+                                            <option value="monthly">Monthly Report</option>
+                                            <option value="unit">Unit Performance</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="dateRange">DATE RANGE</label>
+                                        <div class="date-inputs">
+                                            <input type="date" id="startDate" class="cyber-input">
+                                            <span>to</span>
+                                            <input type="date" id="endDate" class="cyber-input">
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn-primary cyber-btn" onclick="generateAttendanceReport()">
+                                    <i class="fas fa-download"></i> GENERATE REPORT
+                                </button>
+                            </div>
+                            
+                            <div class="reports-list">
+                                <h4>RECENTLY GENERATED REPORTS</h4>
+                                {% if reports %}
+                                    {% for report in reports %}
+                                    <div class="report-item">
+                                        <div class="report-info">
+                                            <h5>{{ report.title }}</h5>
+                                            <span class="report-meta">{{ report.generated_at|date:"M d, Y H:i" }}</span>
+                                        </div>
+                                        <div class="report-actions">
+                                            <button class="btn-sm btn-outline cyber-btn">
+                                                <i class="fas fa-download"></i> DOWNLOAD
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="empty-state small">
+                                        <i class="fas fa-file-alt"></i>
+                                        <p>NO REPORTS GENERATED YET</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div class="tab-content" id="analytics-tab">
+                <section class="content-grid">
+                    <!-- Attendance Trends Chart -->
+                    <div class="content-card cyber-card">
+                        <div class="card-glow"></div>
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-chart-line"></i>
+                                ATTENDANCE TRENDS
+                            </h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="chart-container">
+                                <canvas id="attendanceTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Unit Analytics -->
+                    <div class="content-card cyber-card">
+                        <div class="card-glow"></div>
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-analytics"></i>
+                                UNIT ANALYTICS
+                            </h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="form-group">
+                                <label for="unitSelect">SELECT UNIT</label>
+                                <select id="unitSelect" class="cyber-select" onchange="loadUnitAnalytics(this.value)">
+                                    <option value="">-- Choose a Unit --</option>
+                                    <!-- Units will be loaded dynamically -->
+                                </select>
+                            </div>
+                            
+                            <div id="unitAnalyticsContent" style="display: none;">
+                                <div class="unit-stats">
+                                    <div class="stat-item">
+                                        <span class="stat-label">Total Students</span>
+                                        <span class="stat-value" id="totalStudentsCount">0</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Average Attendance</span>
+                                        <span class="stat-value" id="avgAttendance">0%</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Classes Held</span>
+                                        <span class="stat-value" id="classesHeld">0</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="students-table-container">
+                                    <h4>STUDENT ATTENDANCE RECORDS</h4>
+                                    <div class="table-responsive">
+                                        <table class="cyber-table" id="studentsTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>Student Name</th>
+                                                    <th>Registration No</th>
+                                                    <th>Total Classes</th>
+                                                    <th>Present</th>
+                                                    <th>Absent</th>
+                                                    <th>Attendance %</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Students data will be loaded here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- CSRF Token for AJAX requests -->
+    <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+
+    <!-- External JavaScript -->
+    <script src="{% static 'js/lecturer_dashboard.js' %}"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+    <style>
+    /* Tab Navigation */
+    .tab-navigation {
+        margin-bottom: 30px;
+    }
+
+    .tab-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .tab-btn {
+        padding: 12px 24px;
+        background: rgba(0, 255, 255, 0.1);
+        border: 1px solid #00ffff;
+        color: #00ffff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+
+    .tab-btn.active {
+        background: #00ffff;
+        color: #000;
+        box-shadow: 0 0 20px #00ffff;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    /* Manual Attendance Styles */
+    .manual-attendance-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .form-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .cyber-select, .cyber-input {
+        width: 100%;
+        padding: 10px;
+        background: rgba(0, 255, 255, 0.1);
+        border: 1px solid #00ffff;
+        color: white;
+        border-radius: 5px;
+    }
+
+    .date-inputs {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .attendance-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #333;
+    }
+
+    .students-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .student-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border: 1px solid #333;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        background: rgba(0, 255, 255, 0.05);
+    }
+
+    .student-info h5 {
+        margin: 0;
+        color: #00ffff;
+    }
+
+    .student-info span {
+        color: #888;
+        font-size: 0.9em;
+    }
+
+    .attendance-options {
+        display: flex;
+        gap: 10px;
+    }
+
+    .attendance-option {
+        padding: 5px 15px;
+        border: 1px solid #333;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .attendance-option.active {
+        border-color: #00ffff;
+        background: rgba(0, 255, 255, 0.1);
+        color: #00ffff;
+    }
+
+    .attendance-option.present {
+        border-color: #10b981;
+    }
+
+    .attendance-option.present.active {
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+    }
+
+    .attendance-option.late {
+        border-color: #f59e0b;
+    }
+
+    .attendance-option.late.active {
+        background: rgba(245, 158, 11, 0.2);
+        color: #f59e0b;
+    }
+
+    .attendance-option.absent {
+        border-color: #ef4444;
+    }
+
+    .attendance-option.absent.active {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+    }
+
+    /* Reports Styles */
+    .reports-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .report-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border: 1px solid #333;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        background: rgba(0, 255, 255, 0.05);
+    }
+
+    .report-info h5 {
+        margin: 0;
+        color: #00ffff;
+    }
+
+    .report-meta {
+        color: #888;
+        font-size: 0.9em;
+    }
+
+    /* Analytics Styles */
+    .unit-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 15px;
+        background: rgba(0, 255, 255, 0.05);
+        border: 1px solid #00ffff;
+        border-radius: 5px;
+    }
+
+    .stat-label {
+        display: block;
+        color: #888;
+        font-size: 0.9em;
+        margin-bottom: 5px;
+    }
+
+    .stat-value {
+        display: block;
+        color: #00ffff;
+        font-size: 1.5em;
+        font-weight: bold;
+    }
+
+    .students-table-container {
+        margin-top: 20px;
+    }
+
+    .cyber-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+
+    .cyber-table th {
+        background: rgba(0, 255, 255, 0.1);
+        color: #00ffff;
+        padding: 12px;
+        text-align: left;
+        border: 1px solid #333;
+    }
+
+    .cyber-table td {
+        padding: 12px;
+        border: 1px solid #333;
+        color: #fff;
+    }
+
+    .cyber-table tr:nth-child(even) {
+        background: rgba(0, 255, 255, 0.02);
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .chart-container {
+        height: 300px;
+        position: relative;
+    }
+
+    @media (max-width: 768px) {
+        .tab-buttons {
+            flex-direction: column;
+        }
+        
+        .form-row {
+            flex-direction: column;
+        }
+        
+        .attendance-header {
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        
+        .student-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .attendance-options {
+            width: 100%;
+            justify-content: space-between;
+        }
+        
+        .unit-stats {
+            grid-template-columns: 1fr;
+        }
+    }
+    </style>
+
+    <script>
+    // Tab Management
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                
+                // Update buttons
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update contents
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    if (content.id === `${tabId}-tab`) {
+                        content.classList.add('active');
+                    }
+                });
+            });
+        });
+        
+        // Load initial data
+        loadUnitsForAnalytics();
+        loadAttendanceChart();
+        
+        // Set default dates for reports
+        const today = new Date().toISOString().split('T')[0];
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        document.getElementById('startDate').value = oneWeekAgo;
+        document.getElementById('endDate').value = today;
+    });
+
+    // Manual Attendance Functions
+    async function loadClassStudents(classId) {
+        if (!classId) {
+            document.getElementById('attendanceMarkingArea').style.display = 'none';
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/class/${classId}/attendance/`);
+            const data = await response.json();
+            
+            if (data.students) {
+                displayStudentsList(data.students, classId);
+                document.getElementById('attendanceMarkingArea').style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error loading students:', error);
+        }
+    }
+
+    function displayStudentsList(students, classId) {
+        const container = document.getElementById('studentsList');
+        container.innerHTML = '';
+        
+        students.forEach(student => {
+            const studentElement = document.createElement('div');
+            studentElement.className = 'student-item';
+            studentElement.innerHTML = `
+                <div class="student-info">
+                    <h5>${student.name}</h5>
+                    <span>${student.registration_number}</span>
+                </div>
+                <div class="attendance-options">
+                    <div class="attendance-option present ${student.current_status === 'PRESENT' ? 'active' : ''}" 
+                         onclick="setAttendance('${student.id}', 'PRESENT', this)">
+                        PRESENT
+                    </div>
+                    <div class="attendance-option late ${student.current_status === 'LATE' ? 'active' : ''}" 
+                         onclick="setAttendance('${student.id}', 'LATE', this)">
+                        LATE
+                    </div>
+                    <div class="attendance-option absent ${student.current_status === 'ABSENT' ? 'active' : ''}" 
+                         onclick="setAttendance('${student.id}', 'ABSENT', this)">
+                        ABSENT
+                    </div>
+                </div>
+            `;
+            container.appendChild(studentElement);
+        });
+        
+        // Store current class ID for saving
+        container.setAttribute('data-class-id', classId);
+    }
+
+    function setAttendance(studentId, status, element) {
+        // Remove active class from all options in this student item
+        const options = element.parentElement.querySelectorAll('.attendance-option');
+        options.forEach(opt => opt.classList.remove('active'));
+        
+        // Add active class to selected option
+        element.classList.add('active');
+        
+        // Store the attendance data
+        if (!window.attendanceData) window.attendanceData = {};
+        if (!window.attendanceData[studentId]) window.attendanceData[studentId] = {};
+        window.attendanceData[studentId].status = status;
+    }
+
+    async function saveManualAttendance() {
+        const classId = document.getElementById('studentsList').getAttribute('data-class-id');
+        const attendanceData = window.attendanceData || {};
+        
+        const attendanceRecords = [];
+        for (const [studentId, data] of Object.entries(attendanceData)) {
+            attendanceRecords.push({
+                student_id: studentId,
+                status: data.status
+            });
+        }
+        
+        try {
+            const response = await fetch('/api/lecturer/mark-manual-attendance/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.getElementById('csrfToken').value,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    class_id: classId,
+                    attendance: attendanceRecords
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('Attendance saved successfully!');
+                window.attendanceData = {};
+            } else {
+                alert('Error saving attendance: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error saving attendance:', error);
+            alert('Error saving attendance');
+        }
+    }
+
+    function markAllPresent() {
+        const presentOptions = document.querySelectorAll('.attendance-option.present');
+        presentOptions.forEach(option => {
+            option.classList.add('active');
+            const studentId = option.closest('.student-item').querySelector('.student-info h5').textContent;
+            if (!window.attendanceData) window.attendanceData = {};
+            window.attendanceData[studentId] = { status: 'PRESENT' };
+        });
+    }
+
+    // Reports Functions
+    async function generateAttendanceReport() {
+        const reportType = document.getElementById('reportType').value;
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        // Implement report generation logic
+        alert(`Generating ${reportType} report from ${startDate} to ${endDate}`);
+    }
+
+    // Analytics Functions
+    async function loadUnitsForAnalytics() {
+        try {
+            const response = await fetch('/api/lecturer/units/');
+            const data = await response.json();
+            
+            if (data.units) {
+                const unitSelect = document.getElementById('unitSelect');
+                unitSelect.innerHTML = '<option value="">-- Choose a Unit --</option>';
+                
+                data.units.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.id;
+                    option.textContent = `${unit.unit__code} - ${unit.unit__name}`;
+                    unitSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading units:', error);
+        }
+    }
+
+    async function loadUnitAnalytics(unitId) {
+        if (!unitId) {
+            document.getElementById('unitAnalyticsContent').style.display = 'none';
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/lecturer/unit-analytics/${unitId}/`);
+            const data = await response.json();
+            
+            if (data.unit_data) {
+                displayUnitAnalytics(data.unit_data);
+                document.getElementById('unitAnalyticsContent').style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error loading unit analytics:', error);
+        }
+    }
+
+    function displayUnitAnalytics(unitData) {
+        // Update unit stats
+        document.getElementById('totalStudentsCount').textContent = unitData.enrolled_students || '0';
+        document.getElementById('avgAttendance').textContent = unitData.attendance_percentage ? unitData.attendance_percentage + '%' : '0%';
+        document.getElementById('classesHeld').textContent = unitData.total_classes || '0';
+        
+        // Update students table
+        const tableBody = document.querySelector('#studentsTable tbody');
+        tableBody.innerHTML = '';
+        
+        if (unitData.top_students && unitData.top_students.length > 0) {
+            unitData.top_students.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${student.name}</td>
+                    <td>${student.registration_number}</td>
+                    <td>${student.total_classes || '0'}</td>
+                    <td>${student.present_classes || '0'}</td>
+                    <td>${student.absent_classes || '0'}</td>
+                    <td>${student.attendance_rate || '0'}%</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        } else {
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No student data available</td></tr>';
+        }
+    }
+
+    async function loadAttendanceChart() {
+        try {
+            const response = await fetch('/api/lecturer/recent-attendance/');
+            const data = await response.json();
+            
+            if (data.attendance) {
+                renderAttendanceChart(data.attendance);
+            }
+        } catch (error) {
+            console.error('Error loading attendance data:', error);
+        }
+    }
+
+    function renderAttendanceChart(attendanceData) {
+        const ctx = document.getElementById('attendanceTrendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: attendanceData.map(item => {
+                    const date = new Date(item.date);
+                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                }),
+                datasets: [{
+                    label: 'Attendance Percentage',
+                    data: attendanceData.map(item => item.attendance_percentage),
+                    borderColor: '#00ffff',
+                    backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#fff',
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            color: '#fff',
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#fff'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize AOS
+    AOS.init();
+    </script>
 </body>
 </html>

@@ -850,6 +850,25 @@
     <!-- CSRF Token for AJAX requests -->
     <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
 
+    <!-- URL CONFIGURATION - MUST BE BEFORE STUDENT.JS -->
+    <script>
+        // Global configuration for URLs - this makes Django template tags work in JavaScript
+        window.APP_CONFIG = {
+            urls: {
+                scanQR: '{% url "scan_qr_code" %}',
+                attendanceStats: '{% url "api_student_attendance_stats" %}',
+                recentAttendance: '{% url "api_student_recent_attendance" %}',
+                profileEdit: '{% url "profile_edit" %}',
+                changePassword: '{% url "change_password" %}'
+            },
+            csrfToken: '{{ csrf_token }}'
+        };
+        
+        // Debug: Check if URLs are loaded correctly
+        console.log('APP_CONFIG loaded:', window.APP_CONFIG);
+    </script>
+
+    <!-- Load student.js AFTER the configuration -->
     <script src="{% static 'js/student.js' %}"></script>
     
     <!-- Profile Management Script -->
@@ -1117,10 +1136,11 @@
             }
         });
     </script>
-<!-- Add this in the template, preferably before the closing </body> tag -->
-<script id="unitsData" type="application/json">
-    {{ units_json|safe }}
-</script>
+
+    <!-- Units Data for Charts -->
+    <script id="unitsData" type="application/json">
+        {{ units_json|safe }}
+    </script>
 
 </body>
 </html>

@@ -342,6 +342,41 @@ def login_view(request):
 
     return render(request, 'index.html', context)
 
+
+@login_required
+def profile_page(request):
+    """Dedicated profile page view"""
+    user = request.user
+    profile = get_user_profile(user)
+    
+    if not profile:
+        messages.error(request, "User profile not found.")
+        return redirect('profile_edit')
+    
+    # Determine which forms to show based on user type
+    user_form = UserUpdateForm(instance=user)
+    
+    if is_student(user):
+        profile_form = StudentProfileForm(instance=profile)
+        template = 'student/profile.html'
+    elif is_lecturer(user):
+        profile_form = LecturerProfileForm(instance=profile)
+        template = 'lecturer/profile.html'
+    elif is_admin(user):
+        profile_form = AdminProfileForm(instance=profile)
+        template = 'admin/profile.html'
+    else:
+        return redirect('profile_edit')
+    
+    context = {
+        'user': user,
+        'profile': profile,
+        'user_form': user_form,
+        'profile_form': profile_form,
+    }
+    
+    return render(request, template, context)
+
 @login_required
 def logout_view(request):
     """Logout view with proper error handling"""
@@ -375,16 +410,26 @@ def change_password(request):
                         "Password changed successfully"
                     )
                 messages.success(request, 'Your password was successfully updated!')
+                
+                # Return JSON response for AJAX requests
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True, 'message': 'Password changed successfully!'})
                 return redirect('profile')
+                
             except Exception as e:
                 logger.error("Error changing password for user=%s: %s", request.user.username, str(e))
-                messages.error(request, 'An error occurred while updating your password.')
+                error_msg = 'An error occurred while updating your password.'
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'message': error_msg})
+                messages.error(request, error_msg)
         else:
-            messages.error(request, 'Please correct the error below.')
-    else:
-        form = CustomPasswordChangeForm(request.user)
-
-    return render(request, 'auth/change_password.html', {'form': form})
+            error_msg = 'Please correct the error below.'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': error_msg, 'errors': form.errors})
+            messages.error(request, error_msg)
+    
+    # For GET requests, redirect to profile page since we're using modals
+    return redirect('student_portal')
 
 
 @login_required
@@ -412,11 +457,13 @@ def profile_view(request):
 
 @login_required
 def profile_edit(request):
-    """Profile edit view with transaction safety"""
+    """Profile edit view with transaction safety and AJAX support"""
     user = request.user
     profile = get_user_profile(user)
     
     if not profile:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'message': 'Profile not found'})
         messages.error(request, "Profile not found. Contact administrator.")
         return redirect('profile')
 
@@ -441,38 +488,42 @@ def profile_edit(request):
                     if profile_form:
                         profile_form.save()
                     log_system_action(user, SystemLog.ActionType.UPDATE, "Profile updated")
+                
+                # Return JSON response for AJAX requests
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True, 'message': 'Profile updated successfully!'})
+                
                 messages.success(request, 'Profile updated successfully!')
                 return redirect('profile')
+                
             except Exception as e:
                 logger.error("Error updating profile for user=%s: %s", user.username, str(e))
-                messages.error(request, 'An error occurred while updating your profile.')
+                error_msg = 'An error occurred while updating your profile.'
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'message': error_msg})
+                messages.error(request, error_msg)
         else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        user_form = UserUpdateForm(instance=user)
-        if is_student(user):
-            profile_form = StudentProfileForm(instance=profile)
-        elif is_lecturer(user):
-            profile_form = LecturerProfileForm(instance=profile)
-        elif is_admin(user):
-            profile_form = AdminProfileForm(instance=profile)
-        else:
-            profile_form = None
-
-    context = {
-        'user_form': user_form,
-        'profile_form': profile_form,
-        'user_type': getattr(user, 'user_type', None)
-    }
-
+            # Collect all form errors
+            errors = {}
+            if user_form.errors:
+                errors.update(user_form.errors)
+            if profile_form and profile_form.errors:
+                errors.update(profile_form.errors)
+            
+            error_msg = 'Please correct the errors below.'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': error_msg, 'errors': errors})
+            messages.error(request, error_msg)
+    
+    # For GET requests, redirect to appropriate portal
     if is_student(user):
-        return render(request, 'student/dashboard.html', context)
+        return redirect('student_portal')
     elif is_lecturer(user):
-        return render(request, 'lecturer/dashboard.html', context)
+        return redirect('lecturer_portal')
     elif is_admin(user):
         return redirect('/admin/')
-
-    return render(request, 'profile/edit.html', context)
+    
+    return redirect('profile')
 
 
 
@@ -3092,3 +3143,68 @@ def handler404(request, exception):
 
 def handler500(request):
     return render(request, 'errors/500.html', status=500)
+
+
+@student_required
+@require_http_methods(["GET"])
+def api_student_attendance_stats(request):
+    """API endpoint for student attendance statistics"""
+    try:
+        student = request.user.student_profile
+        attendances = Attendance.objects.filter(student=student)
+        
+        total_classes = attendances.count()
+        present_classes = attendances.filter(status__in=['PRESENT', 'LATE']).count()
+        late_count = attendances.filter(status='LATE').count()
+        absent_count = attendances.filter(status='ABSENT').count()
+        
+        attendance_percentage = round(
+            (present_classes / total_classes * 100), 2
+        ) if total_classes > 0 else 0.0
+        
+        data = {
+            'total_classes': total_classes,
+            'present_classes': present_classes,
+            'late_count': late_count,
+            'absent_count': absent_count,
+            'attendance_percentage': attendance_percentage
+        }
+        return JsonResponse(data)
+        
+    except Exception as e:
+        logger.error("Error in api_student_attendance_stats: %s", str(e))
+        return JsonResponse({'error': 'Unable to fetch attendance statistics'}, status=500)
+
+@student_required
+@require_http_methods(["GET"])
+def api_student_recent_attendance(request):
+    """API endpoint for student recent attendance"""
+    try:
+        student = request.user.student_profile
+        recent_attendances = Attendance.objects.filter(
+            student=student
+        ).select_related(
+            'class_schedule__semester_unit__unit'
+        ).order_by('-scan_time', '-class_schedule__schedule_date')[:10]
+        
+        data = {
+            'attendances': [
+                {
+                    'unit_code': att.class_schedule.semester_unit.unit.code,
+                    'unit_name': att.class_schedule.semester_unit.unit.name,
+                    'date': att.scan_time.date().isoformat() if att.scan_time else att.class_schedule.schedule_date.isoformat(),
+                    'time': att.scan_time.time().strftime('%H:%M') if att.scan_time else '',
+                    'status': att.status,
+                    'venue': att.class_schedule.venue
+                }
+                for att in recent_attendances
+            ]
+        }
+        return JsonResponse(data)
+        
+    except Exception as e:
+        logger.error("Error in api_student_recent_attendance: %s", str(e))
+        return JsonResponse({'error': 'Unable to fetch attendance data'}, status=500)
+
+
+        
