@@ -1922,8 +1922,7 @@
     // REAL QR Code Generation with Backend Integration
     async function generateQRCode(classId) {
         showLoadingSpinner();
-        
-        try {
+             try {
             const response = await fetch(`/lecturer/generate-qr/${classId}/`, {
                 method: 'POST',
                 headers: {

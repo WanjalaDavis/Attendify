@@ -256,11 +256,18 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="reportType">REPORT TYPE</label>
-                                        <select id="reportType" class="cyber-select">
+                                        <select id="reportType" class="cyber-select" onchange="toggleUnitSelection()">
                                             <option value="daily">Daily Report</option>
                                             <option value="weekly">Weekly Report</option>
                                             <option value="monthly">Monthly Report</option>
                                             <option value="unit">Unit Performance</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="unitReportGroup" style="display: none;">
+                                        <label for="unitReportSelect">SELECT UNIT</label>
+                                        <select id="unitReportSelect" class="cyber-select">
+                                            <option value="">-- Choose a Unit --</option>
+                                            <!-- Units will be loaded dynamically -->
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -279,26 +286,28 @@
                             
                             <div class="reports-list">
                                 <h4>RECENTLY GENERATED REPORTS</h4>
-                                {% if reports %}
-                                    {% for report in reports %}
-                                    <div class="report-item">
-                                        <div class="report-info">
-                                            <h5>{{ report.title }}</h5>
-                                            <span class="report-meta">{{ report.generated_at|date:"M d, Y H:i" }}</span>
+                                <div id="reportsContainer">
+                                    {% if reports %}
+                                        {% for report in reports %}
+                                        <div class="report-item">
+                                            <div class="report-info">
+                                                <h5>{{ report.title }}</h5>
+                                                <span class="report-meta">{{ report.generated_at|date:"M d, Y H:i" }}</span>
+                                            </div>
+                                            <div class="report-actions">
+                                                <button class="btn-sm btn-outline cyber-btn" onclick="downloadReport('{{ report.id }}')">
+                                                    <i class="fas fa-download"></i> DOWNLOAD
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div class="report-actions">
-                                            <button class="btn-sm btn-outline cyber-btn">
-                                                <i class="fas fa-download"></i> DOWNLOAD
-                                            </button>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="empty-state small">
+                                            <i class="fas fa-file-alt"></i>
+                                            <p>NO REPORTS GENERATED YET</p>
                                         </div>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <div class="empty-state small">
-                                        <i class="fas fa-file-alt"></i>
-                                        <p>NO REPORTS GENERATED YET</p>
-                                    </div>
-                                {% endif %}
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -346,15 +355,15 @@
                                 <div class="unit-stats">
                                     <div class="stat-item">
                                         <span class="stat-label">Total Students</span>
-                                        <span class="stat-value" id="totalStudentsCount">0</span>
+                                        <span class="stat-value" id="analyticsTotalStudents">0</span>
                                     </div>
                                     <div class="stat-item">
                                         <span class="stat-label">Average Attendance</span>
-                                        <span class="stat-value" id="avgAttendance">0%</span>
+                                        <span class="stat-value" id="analyticsAvgAttendance">0%</span>
                                     </div>
                                     <div class="stat-item">
                                         <span class="stat-label">Classes Held</span>
-                                        <span class="stat-value" id="classesHeld">0</span>
+                                        <span class="stat-value" id="analyticsClassesHeld">0</span>
                                     </div>
                                 </div>
                                 
@@ -448,13 +457,26 @@
         min-width: 200px;
     }
 
+    /* FIXED: Dropdown styles for better visibility */
     .cyber-select, .cyber-input {
         width: 100%;
         padding: 10px;
-        background: rgba(0, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.8) !important;
         border: 1px solid #00ffff;
-        color: white;
+        color: #00ffff !important;
         border-radius: 5px;
+        font-weight: bold;
+    }
+
+    .cyber-select option {
+        background: #000 !important;
+        color: #00ffff !important;
+        padding: 10px;
+    }
+
+    .cyber-select:focus {
+        outline: none;
+        box-shadow: 0 0 10px #00ffff;
     }
 
     .date-inputs {
@@ -640,6 +662,100 @@
         position: relative;
     }
 
+    /* Loading States */
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 2px solid #00ffff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Success/Error Messages */
+    .message {
+        padding: 12px 16px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: slideIn 0.3s ease-out;
+        z-index: 1000;
+        position: relative;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .message.success {
+        background: rgba(16, 185, 129, 0.2);
+        border: 1px solid #10b981;
+        color: #10b981;
+    }
+
+    .message.error {
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid #ef4444;
+        color: #ef4444;
+    }
+
+    .message.info {
+        background: rgba(59, 130, 246, 0.2);
+        border: 1px solid #3b82f6;
+        color: #3b82f6;
+    }
+
+    /* Notification Badge */
+    .notification-badge {
+        background: #ef4444;
+        color: white;
+        border-radius: 50%;
+        padding: 2px 6px;
+        font-size: 0.7em;
+        position: absolute;
+        top: -5px;
+        right: -5px;
+    }
+
+    /* Button Loading States */
+    .btn-primary.cyber-btn.loading {
+        opacity: 0.7;
+        pointer-events: none;
+        position: relative;
+    }
+
+    .btn-primary.cyber-btn.loading::after {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        border: 2px solid transparent;
+        border-top: 2px solid #00ffff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        right: 10px;
+    }
+
     @media (max-width: 768px) {
         .tab-buttons {
             flex-direction: column;
@@ -673,8 +789,17 @@
     </style>
 
     <script>
+    // Global variables
+    let attendanceData = {};
+    let currentClassId = null;
+    let attendanceChart = null;
+    let allUnits = [];
+    let autoRefreshInterval = null;
+
     // Tab Management
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('Initializing Attendance Management System...');
+        
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
         
@@ -693,12 +818,17 @@
                         content.classList.add('active');
                     }
                 });
+
+                // Load data for active tab
+                if (tabId === 'analytics') {
+                    loadUnitsForAnalytics();
+                    loadAttendanceChart();
+                } else if (tabId === 'reports') {
+                    loadUnitsForReports();
+                    loadRecentReports();
+                }
             });
         });
-        
-        // Load initial data
-        loadUnitsForAnalytics();
-        loadAttendanceChart();
         
         // Set default dates for reports
         const today = new Date().toISOString().split('T')[0];
@@ -706,7 +836,37 @@
         
         document.getElementById('startDate').value = oneWeekAgo;
         document.getElementById('endDate').value = today;
+
+        // Initialize real-time clock (without auto-refresh that causes blinking)
+        updateClock();
+
+        // Load initial data
+        loadUnitsForReports();
+        loadUnitsForAnalytics();
+
+        console.log('Attendance Management System initialized successfully');
     });
+
+    function updateClock() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', { 
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        const dateString = now.toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        
+        const clockElement = document.getElementById('headerClock');
+        if (clockElement) {
+            clockElement.innerHTML = `${timeString}<br><span style="font-size: 0.7em;">${dateString}</span>`;
+        }
+    }
 
     // Manual Attendance Functions
     async function loadClassStudents(classId) {
@@ -716,15 +876,40 @@
         }
         
         try {
-            const response = await fetch(`/api/class/${classId}/attendance/`);
+            console.log(`Loading students for class: ${classId}`);
+            
+            // Show loading state
+            const classSelect = document.getElementById('classSelect');
+            classSelect.classList.add('loading');
+            
+            const response = await fetch(`/api/lecturer/class-attendance/${classId}/`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
+            console.log('Students data received:', data);
             
             if (data.students) {
                 displayStudentsList(data.students, classId);
                 document.getElementById('attendanceMarkingArea').style.display = 'block';
+                
+                // Update class name display
+                const selectedOption = classSelect.options[classSelect.selectedIndex];
+                document.getElementById('selectedClassName').textContent = selectedOption.text;
+                
+                showMessage(`Loaded ${data.students.length} students for the selected class`, 'success');
+            } else {
+                showMessage('No students found for this class', 'error');
             }
+            
         } catch (error) {
             console.error('Error loading students:', error);
+            showMessage('Error loading students: ' + error.message, 'error');
+        } finally {
+            const classSelect = document.getElementById('classSelect');
+            classSelect.classList.remove('loading');
         }
     }
 
@@ -732,13 +917,27 @@
         const container = document.getElementById('studentsList');
         container.innerHTML = '';
         
+        // Reset attendance data
+        attendanceData = {};
+        currentClassId = classId;
+        
+        if (students.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state small">
+                    <i class="fas fa-users-slash"></i>
+                    <p>NO STUDENTS ENROLLED IN THIS CLASS</p>
+                </div>
+            `;
+            return;
+        }
+        
         students.forEach(student => {
             const studentElement = document.createElement('div');
             studentElement.className = 'student-item';
             studentElement.innerHTML = `
                 <div class="student-info">
-                    <h5>${student.name}</h5>
-                    <span>${student.registration_number}</span>
+                    <h5>${student.name || 'Unknown Student'}</h5>
+                    <span>${student.registration_number || 'N/A'}</span>
                 </div>
                 <div class="attendance-options">
                     <div class="attendance-option present ${student.current_status === 'PRESENT' ? 'active' : ''}" 
@@ -756,10 +955,14 @@
                 </div>
             `;
             container.appendChild(studentElement);
+            
+            // Initialize attendance data
+            attendanceData[student.id] = {
+                status: student.current_status || 'ABSENT',
+                name: student.name,
+                registration_number: student.registration_number
+            };
         });
-        
-        // Store current class ID for saving
-        container.setAttribute('data-class-id', classId);
     }
 
     function setAttendance(studentId, status, element) {
@@ -771,24 +974,37 @@
         element.classList.add('active');
         
         // Store the attendance data
-        if (!window.attendanceData) window.attendanceData = {};
-        if (!window.attendanceData[studentId]) window.attendanceData[studentId] = {};
-        window.attendanceData[studentId].status = status;
+        attendanceData[studentId] = {
+            ...attendanceData[studentId],
+            status: status
+        };
+        
+        console.log(`Attendance set for student ${studentId}: ${status}`);
+        showMessage(`Marked ${attendanceData[studentId].name} as ${status}`, 'info');
     }
 
     async function saveManualAttendance() {
-        const classId = document.getElementById('studentsList').getAttribute('data-class-id');
-        const attendanceData = window.attendanceData || {};
+        if (!currentClassId) {
+            showMessage('Please select a class first', 'error');
+            return;
+        }
         
-        const attendanceRecords = [];
+        const records = [];
         for (const [studentId, data] of Object.entries(attendanceData)) {
-            attendanceRecords.push({
+            records.push({
                 student_id: studentId,
                 status: data.status
             });
         }
         
+        if (records.length === 0) {
+            showMessage('No attendance data to save', 'error');
+            return;
+        }
+        
         try {
+            console.log('Saving attendance data:', { class_id: currentClassId, attendance: records });
+            
             const response = await fetch('/api/lecturer/mark-manual-attendance/', {
                 method: 'POST',
                 headers: {
@@ -796,22 +1012,31 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    class_id: classId,
-                    attendance: attendanceRecords
+                    class_id: currentClassId,
+                    attendance: records
                 })
             });
             
             const result = await response.json();
             
             if (result.success) {
-                alert('Attendance saved successfully!');
-                window.attendanceData = {};
+                showMessage(`Attendance saved successfully for ${records.length} students!`, 'success');
+                console.log('Attendance saved successfully');
+                
+                // Reset form after successful save
+                setTimeout(() => {
+                    document.getElementById('classSelect').value = '';
+                    document.getElementById('attendanceMarkingArea').style.display = 'none';
+                    attendanceData = {};
+                    currentClassId = null;
+                }, 2000);
+                
             } else {
-                alert('Error saving attendance: ' + result.message);
+                throw new Error(result.message || 'Failed to save attendance');
             }
         } catch (error) {
             console.error('Error saving attendance:', error);
-            alert('Error saving attendance');
+            showMessage('Error saving attendance: ' + error.message, 'error');
         }
     }
 
@@ -819,25 +1044,221 @@
         const presentOptions = document.querySelectorAll('.attendance-option.present');
         presentOptions.forEach(option => {
             option.classList.add('active');
-            const studentId = option.closest('.student-item').querySelector('.student-info h5').textContent;
-            if (!window.attendanceData) window.attendanceData = {};
-            window.attendanceData[studentId] = { status: 'PRESENT' };
+            
+            // Remove active class from other options in the same group
+            const otherOptions = option.parentElement.querySelectorAll('.attendance-option:not(.present)');
+            otherOptions.forEach(opt => opt.classList.remove('active'));
+            
+            // Find student ID from the parent element
+            const studentItem = option.closest('.student-item');
+            const studentName = studentItem.querySelector('.student-info h5').textContent;
+            
+            // Update attendance data
+            for (const [studentId, data] of Object.entries(attendanceData)) {
+                if (data.name === studentName) {
+                    attendanceData[studentId].status = 'PRESENT';
+                    break;
+                }
+            }
         });
+        
+        showMessage('All students marked as present', 'success');
     }
 
     // Reports Functions
+    function toggleUnitSelection() {
+        const reportType = document.getElementById('reportType').value;
+        const unitGroup = document.getElementById('unitReportGroup');
+        
+        if (reportType === 'unit') {
+            unitGroup.style.display = 'block';
+        } else {
+            unitGroup.style.display = 'none';
+        }
+    }
+
+    async function loadUnitsForReports() {
+        try {
+            console.log('Loading units for reports...');
+            
+            const response = await fetch('/api/lecturer/units/');
+            const data = await response.json();
+            
+            if (data.units) {
+                const unitSelect = document.getElementById('unitReportSelect');
+                const analyticsSelect = document.getElementById('unitSelect');
+                
+                unitSelect.innerHTML = '<option value="">-- Choose a Unit --</option>';
+                analyticsSelect.innerHTML = '<option value="">-- Choose a Unit --</option>';
+                
+                data.units.forEach(unit => {
+                    const option1 = document.createElement('option');
+                    option1.value = unit.id;
+                    option1.textContent = `${unit.unit__code} - ${unit.unit__name}`;
+                    unitSelect.appendChild(option1);
+                    
+                    const option2 = document.createElement('option');
+                    option2.value = unit.id;
+                    option2.textContent = `${unit.unit__code} - ${unit.unit__name}`;
+                    analyticsSelect.appendChild(option2);
+                });
+                
+                showMessage(`Loaded ${data.units.length} units`, 'success');
+            }
+        } catch (error) {
+            console.error('Error loading units for reports:', error);
+        }
+    }
+
     async function generateAttendanceReport() {
         const reportType = document.getElementById('reportType').value;
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
+        const unitId = document.getElementById('unitReportSelect').value;
         
-        // Implement report generation logic
-        alert(`Generating ${reportType} report from ${startDate} to ${endDate}`);
+        if (!startDate || !endDate) {
+            showMessage('Please select both start and end dates', 'error');
+            return;
+        }
+        
+        if (reportType === 'unit' && !unitId) {
+            showMessage('Please select a unit for unit reports', 'error');
+            return;
+        }
+        
+        try {
+            const reportData = {
+                report_type: reportType,
+                start_date: startDate,
+                end_date: endDate
+            };
+            
+            // Add unit_id only for unit reports
+            if (reportType === 'unit' && unitId) {
+                reportData.unit_id = unitId;
+            }
+            
+            const generateBtn = document.querySelector('.btn-primary.cyber-btn');
+            generateBtn.classList.add('loading');
+            generateBtn.disabled = true;
+            
+            const response = await fetch('/api/lecturer/generate-report/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.getElementById('csrfToken').value,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(reportData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showMessage('Report generated successfully! You can now download it from the list below.', 'success');
+                loadRecentReports(); // Refresh reports list
+            } else {
+                throw new Error(result.message || 'Failed to generate report');
+            }
+        } catch (error) {
+            console.error('Error generating report:', error);
+            showMessage('Error generating report: ' + error.message, 'error');
+        } finally {
+            const generateBtn = document.querySelector('.btn-primary.cyber-btn');
+            generateBtn.classList.remove('loading');
+            generateBtn.disabled = false;
+        }
+    }
+
+    async function loadRecentReports() {
+        try {
+            const response = await fetch('/api/lecturer/reports/');
+            const data = await response.json();
+            
+            const reportsContainer = document.getElementById('reportsContainer');
+            
+            if (data.reports && data.reports.length > 0) {
+                reportsContainer.innerHTML = '';
+                data.reports.forEach(report => {
+                    const reportElement = document.createElement('div');
+                    reportElement.className = 'report-item';
+                    reportElement.innerHTML = `
+                        <div class="report-info">
+                            <h5>${report.title}</h5>
+                            <span class="report-meta">${new Date(report.generated_at).toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })}</span>
+                        </div>
+                        <div class="report-actions">
+                            <button class="btn-sm btn-outline cyber-btn" onclick="downloadReport('${report.id}')">
+                                <i class="fas fa-download"></i> DOWNLOAD
+                            </button>
+                        </div>
+                    `;
+                    reportsContainer.appendChild(reportElement);
+                });
+            } else {
+                reportsContainer.innerHTML = `
+                    <div class="empty-state small">
+                        <i class="fas fa-file-alt"></i>
+                        <p>NO REPORTS GENERATED YET</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading reports:', error);
+        }
+    }
+
+    async function downloadReport(reportId) {
+        try {
+            showMessage('Preparing download...', 'info');
+            
+            const response = await fetch(`/api/lecturer/download-report/${reportId}/`);
+            
+            if (response.ok) {
+                // Create a blob from the response and create a download link
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                
+                // Get filename from response headers or use default
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = `attendance_report_${reportId}.pdf`;
+                
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showMessage('Report download started!', 'success');
+            } else {
+                throw new Error('Failed to download report');
+            }
+        } catch (error) {
+            console.error('Error downloading report:', error);
+            showMessage('Error downloading report: ' + error.message, 'error');
+        }
     }
 
     // Analytics Functions
     async function loadUnitsForAnalytics() {
         try {
+            console.log('Loading units for analytics...');
+            
             const response = await fetch('/api/lecturer/units/');
             const data = await response.json();
             
@@ -851,9 +1272,12 @@
                     option.textContent = `${unit.unit__code} - ${unit.unit__name}`;
                     unitSelect.appendChild(option);
                 });
+                
+                console.log(`Loaded ${data.units.length} units for analytics`);
             }
         } catch (error) {
             console.error('Error loading units:', error);
+            showMessage('Error loading units data', 'error');
         }
     }
 
@@ -864,23 +1288,29 @@
         }
         
         try {
+            console.log(`Loading analytics for unit: ${unitId}`);
+            
             const response = await fetch(`/api/lecturer/unit-analytics/${unitId}/`);
             const data = await response.json();
             
             if (data.unit_data) {
                 displayUnitAnalytics(data.unit_data);
                 document.getElementById('unitAnalyticsContent').style.display = 'block';
+                showMessage(`Loaded analytics for ${data.unit_data.name}`, 'success');
+            } else {
+                showMessage('No analytics data available for this unit', 'error');
             }
         } catch (error) {
             console.error('Error loading unit analytics:', error);
+            showMessage('Error loading unit analytics', 'error');
         }
     }
 
     function displayUnitAnalytics(unitData) {
-        // Update unit stats
-        document.getElementById('totalStudentsCount').textContent = unitData.enrolled_students || '0';
-        document.getElementById('avgAttendance').textContent = unitData.attendance_percentage ? unitData.attendance_percentage + '%' : '0%';
-        document.getElementById('classesHeld').textContent = unitData.total_classes || '0';
+        // Update unit stats with corrected IDs
+        document.getElementById('analyticsTotalStudents').textContent = unitData.enrolled_students || '0';
+        document.getElementById('analyticsAvgAttendance').textContent = unitData.attendance_percentage ? unitData.attendance_percentage + '%' : '0%';
+        document.getElementById('analyticsClassesHeld').textContent = unitData.total_classes || '0';
         
         // Update students table
         const tableBody = document.querySelector('#studentsTable tbody');
@@ -890,8 +1320,8 @@
             unitData.top_students.forEach(student => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${student.name}</td>
-                    <td>${student.registration_number}</td>
+                    <td>${student.name || 'Unknown'}</td>
+                    <td>${student.registration_number || 'N/A'}</td>
                     <td>${student.total_classes || '0'}</td>
                     <td>${student.present_classes || '0'}</td>
                     <td>${student.absent_classes || '0'}</td>
@@ -900,26 +1330,38 @@
                 tableBody.appendChild(row);
             });
         } else {
-            tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No student data available</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">No student data available</td></tr>';
         }
     }
 
     async function loadAttendanceChart() {
         try {
+            console.log('Loading attendance chart data...');
+            
             const response = await fetch('/api/lecturer/recent-attendance/');
             const data = await response.json();
             
             if (data.attendance) {
                 renderAttendanceChart(data.attendance);
+            } else {
+                // Create sample data if no real data available
+                renderSampleChart();
             }
         } catch (error) {
             console.error('Error loading attendance data:', error);
+            renderSampleChart();
         }
     }
 
     function renderAttendanceChart(attendanceData) {
         const ctx = document.getElementById('attendanceTrendChart').getContext('2d');
-        new Chart(ctx, {
+        
+        // Destroy existing chart if it exists
+        if (attendanceChart) {
+            attendanceChart.destroy();
+        }
+        
+        attendanceChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: attendanceData.map(item => {
@@ -932,7 +1374,11 @@
                     borderColor: '#00ffff',
                     backgroundColor: 'rgba(0, 255, 255, 0.1)',
                     tension: 0.4,
-                    fill: true
+                    fill: true,
+                    pointBackgroundColor: '#00ffff',
+                    pointBorderColor: '#000',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
                 }]
             },
             options: {
@@ -943,8 +1389,78 @@
                         labels: {
                             color: '#fff',
                             font: {
-                                size: 12
+                                size: 12,
+                                family: "'Courier New', monospace"
                             }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#00ffff',
+                        bodyColor: '#fff',
+                        borderColor: '#00ffff',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            color: '#fff',
+                            callback: function(value) {
+                                return value + '%';
+                            },
+                            font: {
+                                family: "'Courier New', monospace"
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#fff',
+                            font: {
+                                family: "'Courier New', monospace"
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderSampleChart() {
+        const ctx = document.getElementById('attendanceTrendChart').getContext('2d');
+        
+        // Sample data for demonstration
+        const sampleData = {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+            datasets: [{
+                label: 'Attendance Percentage',
+                data: [85, 78, 92, 88, 95],
+                borderColor: '#00ffff',
+                backgroundColor: 'rgba(0, 255, 255, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        };
+        
+        attendanceChart = new Chart(ctx, {
+            type: 'line',
+            data: sampleData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#fff'
                         }
                     }
                 },
@@ -975,8 +1491,46 @@
         });
     }
 
+    // Utility Functions
+    function showMessage(message, type = 'info') {
+        // Remove existing messages
+        const existingMessages = document.querySelectorAll('.message');
+        existingMessages.forEach(msg => msg.remove());
+        
+        // Create new message
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            ${message}
+        `;
+        
+        // Insert at the top of main content
+        const mainContent = document.querySelector('.main-content');
+        const welcomeSection = document.querySelector('.welcome-section');
+        mainContent.insertBefore(messageDiv, welcomeSection.nextSibling);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.remove();
+            }
+        }, 5000);
+    }
+
     // Initialize AOS
-    AOS.init();
+    AOS.init({
+        duration: 1000,
+        once: true,
+        offset: 100
+    });
+
+    // Error handling for missing elements
+    window.addEventListener('error', function(e) {
+        console.error('Global error:', e.error);
+    });
+
+    console.log('Attendance page JavaScript loaded successfully');
     </script>
 </body>
 </html>

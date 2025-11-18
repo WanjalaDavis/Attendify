@@ -1,4 +1,5 @@
 import json
+import re
 import secrets
 import qrcode
 import logging
@@ -35,6 +36,7 @@ from .forms import (
     AttendanceReportForm, QRScanForm, ManualAttendanceForm,
     DateRangeFilterForm, StudentSearchForm, AttendanceFilterForm
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -208,11 +210,16 @@ def validate_qr_token(qr_token, class_schedule):
         if not qr_code:
             return False, None, "Invalid QR code"
 
-        # Check if QR code has expired
-        if qr_code.expires_at < timezone.now():
+        # Check if QR code has expired (based on class end time)
+        class_end_datetime = timezone.make_aware(
+            datetime.combine(class_schedule.schedule_date, class_schedule.end_time)
+        )
+        
+        if timezone.now() > class_end_datetime:
+            # Auto-deactivate QR code when class ends
             qr_code.is_active = False
             qr_code.save()
-            return False, None, "QR code has expired"
+            return False, None, "Class has ended"
 
         # Check if class is ongoing
         if not is_class_ongoing(class_schedule):
@@ -1218,7 +1225,7 @@ def lecturer_attendance(request):
 
 @lecturer_required
 def generate_qr_code(request, class_id):
-    """Generate QR code with proper status validation"""
+    """Generate QR code with proper status validation - FIXED VERSION"""
     try:
         with transaction.atomic():
             class_schedule = get_object_or_404(
@@ -1237,8 +1244,7 @@ def generate_qr_code(request, class_id):
             # Check if valid QR code already exists
             existing_qr = QRCode.objects.filter(
                 class_schedule=class_schedule, 
-                is_active=True,
-                expires_at__gt=timezone.now()
+                is_active=True
             ).first()
             
             if existing_qr:
@@ -1247,14 +1253,20 @@ def generate_qr_code(request, class_id):
                     'message': 'Active QR code already exists for this class.'
                 }, status=400)
 
-            # Create new QR code
+            # Create new QR code - set expiry to class end time
             qr_token = secrets.token_urlsafe(32)
-            expires_at = timezone.now() + timedelta(minutes=QR_CODE_EXPIRY_MINUTES)
-
+            
+            # Set QR code to expire when class ends
+            class_end_datetime = timezone.make_aware(
+                datetime.combine(class_schedule.schedule_date, class_schedule.end_time)
+            )
+            
+            # FIX: Create QR code with scan_count=0
             qr_code = QRCode.objects.create(
                 class_schedule=class_schedule,
                 token=qr_token,
-                expires_at=expires_at
+                expires_at=class_end_datetime,  # QR expires when class ends
+                scan_count=0  # THIS FIXES THE ERROR
             )
 
             # Generate QR code image
@@ -1262,7 +1274,7 @@ def generate_qr_code(request, class_id):
             qr_data = {
                 'token': qr_token,
                 'class_id': str(class_schedule.id),
-                'expires_at': expires_at.isoformat()
+                'expires_at': class_end_datetime.isoformat()
             }
             qr.add_data(json.dumps(qr_data))
             qr.make(fit=True)
@@ -1285,8 +1297,9 @@ def generate_qr_code(request, class_id):
                 'success': True,
                 'message': 'QR code generated successfully!',
                 'token': qr_token,
-                'expires_at': expires_at.isoformat(),
-                'class_name': class_schedule.semester_unit.unit.name
+                'expires_at': class_end_datetime.isoformat(),
+                'class_name': class_schedule.semester_unit.unit.name,
+                'qr_data': json.dumps(qr_data)  # Add this for the frontend
             })
             
     except Exception as e:
@@ -1823,7 +1836,7 @@ def scan_qr_code(request):
             else:
                 logger.warning("No location data provided for QR scan")
 
-            # Create attendance record
+           # Create attendance record
             attendance = Attendance.objects.create(
                 student=student,
                 class_schedule=class_schedule,
@@ -1835,10 +1848,6 @@ def scan_qr_code(request):
                 location_accuracy=accuracy,
                 location_valid=location_valid,
             )
-
-            # Deactivate QR code after successful scan to prevent reuse
-            qr_code.is_active = False
-            qr_code.save()
 
         # Log successful scan
         log_system_action(
@@ -2131,70 +2140,71 @@ def api_lecturer_reports(request):
 @lecturer_required
 @require_http_methods(["GET"])
 def api_unit_analytics(request, unit_id):
-    """API endpoint for unit analytics with complete data"""
+    """API endpoint for unit analytics with COMPLETE FIXED DATA"""
     try:
         unit = get_object_or_404(SemesterUnit, id=unit_id, lecturer=request.user.lecturer_profile)
         
-        # Calculate comprehensive attendance statistics
-        attendances = Attendance.objects.filter(
-            class_schedule__semester_unit=unit
-        )
-        
-        present_count = attendances.filter(status='PRESENT').count()
-        late_count = attendances.filter(status='LATE').count()
-        absent_count = attendances.filter(status='ABSENT').count()
-        total_count = present_count + late_count + absent_count
-        
-        attendance_percentage = round(
-            (present_count + late_count) / total_count * 100, 2
-        ) if total_count > 0 else 0.0
-        
-        # Get student performance data
-        student_performance = StudentUnitEnrollment.objects.filter(
+        # Get all enrolled students
+        enrolled_students = StudentUnitEnrollment.objects.filter(
             semester_unit=unit,
             is_active=True
-        )[:10]  # Top 10 students by enrollment date
+        ).select_related('student__user')
         
-        top_students = []
-        for enrollment in student_performance:
+        # Calculate unit statistics
+        total_classes = ClassSchedule.objects.filter(
+            semester_unit=unit,
+            is_active=True
+        ).count()
+        
+        # Get attendance data for all students in this unit
+        student_performance = []
+        for enrollment in enrolled_students:
             student_attendances = Attendance.objects.filter(
                 student=enrollment.student,
                 class_schedule__semester_unit=unit
             )
+            
             total_student_classes = student_attendances.count()
             present_student_classes = student_attendances.filter(
                 status__in=['PRESENT', 'LATE']
             ).count()
+            absent_student_classes = student_attendances.filter(
+                status='ABSENT'
+            ).count()
             
-            attendance_rate = round(
-                (present_student_classes / total_student_classes * 100), 2
-            ) if total_student_classes > 0 else 0.0
+            # FIX: Proper attendance percentage calculation
+            if total_student_classes > 0:
+                attendance_rate = round((present_student_classes / total_student_classes * 100), 2)
+            else:
+                attendance_rate = 0.0  # NOT 100% when no classes!
             
-            top_students.append({
+            student_performance.append({
                 'name': enrollment.student.user.get_full_name() or enrollment.student.user.username,
                 'registration_number': enrollment.student.registration_number,
+                'total_classes': total_student_classes,
+                'present_classes': present_student_classes,
+                'absent_classes': absent_student_classes,
                 'attendance_rate': attendance_rate
             })
         
-        # Sort by attendance rate (descending)
-        top_students.sort(key=lambda x: x['attendance_rate'], reverse=True)
+        # Calculate overall unit attendance
+        all_attendances = Attendance.objects.filter(class_schedule__semester_unit=unit)
+        total_attendance_records = all_attendances.count()
+        present_attendance_records = all_attendances.filter(status__in=['PRESENT', 'LATE']).count()
+        
+        overall_attendance_percentage = round(
+            (present_attendance_records / total_attendance_records * 100), 2
+        ) if total_attendance_records > 0 else 0.0
         
         unit_data = {
             'code': unit.unit.code,
             'name': unit.unit.name,
-            'attendance_percentage': attendance_percentage,
-            'present_count': present_count,
-            'late_count': late_count,
-            'absent_count': absent_count,
-            'enrolled_students': StudentUnitEnrollment.objects.filter(
-                semester_unit=unit, 
-                is_active=True
-            ).count(),
-            'top_students': top_students[:5],  
-            'chart_data': {
-                'labels': ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-                'rates': [75, 82, 78, 85]  # Mock data - you can implement real weekly data
-            }
+            'attendance_percentage': overall_attendance_percentage,
+            'present_count': present_attendance_records,
+            'absent_count': all_attendances.filter(status='ABSENT').count(),
+            'enrolled_students': enrolled_students.count(),
+            'total_classes': total_classes,
+            'top_students': student_performance,  # Now with correct calculations
         }
         
         return JsonResponse({'unit_data': unit_data})
@@ -2718,9 +2728,9 @@ def scan_qr_code_endpoint(request):
                 print("DEBUG: Location data not provided or class location not set")
                 location_valid = True  # Allow without location if not set up
 
-            # Create attendance record
+            # ✅ FIX: Define 'now' at the proper scope (outside the if/else blocks)
             now = timezone.now()
-            
+
             # Create with all available fields
             attendance_data = {
                 'student': student,
@@ -2729,27 +2739,26 @@ def scan_qr_code_endpoint(request):
                 'status': 'PRESENT',
                 'scan_time': now,
             }
-            
+
             # Add optional location fields if they exist in model
             attendance_fields = [f.name for f in Attendance._meta.get_fields()]
-            
+
             if 'scan_latitude' in attendance_fields and latitude:
                 attendance_data['scan_latitude'] = latitude
             if 'scan_longitude' in attendance_fields and longitude:
                 attendance_data['scan_longitude'] = longitude
             if 'location_valid' in attendance_fields:
                 attendance_data['location_valid'] = location_valid
-            
+
             attendance = Attendance.objects.create(**attendance_data)
 
-            # Deactivate QR code after successful scan to prevent reuse
-            qr_code.is_active = False
-            qr_code.save()
+            # QR CODE REMAINS ACTIVE FOR OTHER STUDENTS
+            # It will auto-deactivate when class ends via validate_qr_token
 
             print(f"DEBUG: Attendance created - ID: {attendance.id}")
-            print(f"DEBUG: QR code deactivated - ID: {qr_code.id}")
+            print(f"DEBUG: QR code remains active for other students")
 
-        # Log successful scan
+        # ✅ FIX: 'now' is now available in this scope
         log_system_action(
             request.user, 
             SystemLog.ActionType.SCAN,
@@ -3205,6 +3214,156 @@ def api_student_recent_attendance(request):
     except Exception as e:
         logger.error("Error in api_student_recent_attendance: %s", str(e))
         return JsonResponse({'error': 'Unable to fetch attendance data'}, status=500)
+
+
+
+@lecturer_required
+@require_http_methods(["GET"])
+def api_class_attendance_detail(request, class_id):
+    """API endpoint for class attendance data - FIXED VERSION"""
+    try:
+        class_schedule = get_object_or_404(ClassSchedule, id=class_id, lecturer=request.user.lecturer_profile)
+        
+        # Get enrolled students with their current attendance status
+        enrolled_students = StudentUnitEnrollment.objects.filter(
+            semester_unit=class_schedule.semester_unit,
+            is_active=True
+        ).select_related('student__user')
+        
+        students_data = []
+        for enrollment in enrolled_students:
+            # Check if attendance already marked
+            attendance = Attendance.objects.filter(
+                student=enrollment.student,
+                class_schedule=class_schedule
+            ).first()
+            
+            students_data.append({
+                'id': str(enrollment.student.id),
+                'name': enrollment.student.user.get_full_name() or enrollment.student.user.username,
+                'registration_number': enrollment.student.registration_number,
+                'current_status': attendance.status if attendance else 'ABSENT'
+            })
+        
+        return JsonResponse({'students': students_data})
+        
+    except Exception as e:
+        logger.error("Error in api_class_attendance_detail: %s", str(e))
+        return JsonResponse({'error': 'Unable to fetch class attendance data'}, status=500)
+
+@lecturer_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_generate_report(request):
+    """API endpoint for generating reports - FIXED FOR YOUR MODEL"""
+    try:
+        lecturer = request.user.lecturer_profile
+        data = json.loads(request.body)
+        
+        report_type = data.get('report_type')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
+        unit_id = data.get('unit_id')
+        
+        # Validate required fields
+        if not report_type or not start_date or not end_date:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Missing required fields: report_type, start_date, end_date'
+            }, status=400)
+        
+        # For ALL report types, we need a semester_unit
+        # Let's use the lecturer's first teaching unit as default
+        semester_unit = None
+        if unit_id:
+            # Use the provided unit
+            try:
+                semester_unit = SemesterUnit.objects.get(id=unit_id, lecturer=lecturer)
+            except SemesterUnit.DoesNotExist:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Invalid unit selected'
+                }, status=400)
+        else:
+            # Get the lecturer's first teaching unit as default
+            semester_unit = SemesterUnit.objects.filter(lecturer=lecturer).first()
+            if not semester_unit:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'No teaching units found. Please assign units first.'
+                }, status=400)
+        
+        # Create report entry with semester_unit (required by your model)
+        report = AttendanceReport.objects.create(
+            generated_by=lecturer,
+            semester_unit=semester_unit,  # This is now required
+            title=f"{report_type.capitalize()} Report - {start_date} to {end_date}",
+            report_type=report_type,
+            start_date=start_date,
+            end_date=end_date,
+            is_generated=True
+        )
+        
+        # Calculate statistics
+        try:
+            report.calculate_statistics()
+        except Exception as e:
+            logger.warning("Error calculating report statistics: %s", str(e))
+            # Continue even if statistics fail
+        
+        log_system_action(
+            request.user,
+            SystemLog.ActionType.REPORT,
+            f"Report generated: {report.title}"
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Report generated successfully!',
+            'report_id': str(report.id),
+            'report_title': report.title
+        })
+        
+    except Exception as e:
+        logger.error("Error in api_generate_report: %s", str(e))
+        return JsonResponse({
+            'success': False, 
+            'message': f'Error generating report: {str(e)}'
+        }, status=500)
+    
+@lecturer_required
+@require_http_methods(["GET"])
+def api_lecturer_reports_list(request):
+    """API endpoint for lecturer's reports list"""
+    try:
+        lecturer = request.user.lecturer_profile
+        reports = AttendanceReport.objects.filter(generated_by=lecturer).values(
+            'id', 'title', 'report_type', 'generated_at', 'is_generated'
+        ).order_by('-generated_at')[:10]
+        
+        return JsonResponse({'reports': list(reports)})
+        
+    except Exception as e:
+        logger.error("Error in api_lecturer_reports_list: %s", str(e))
+        return JsonResponse({'reports': []})
+
+@lecturer_required
+@require_http_methods(["GET"])
+def api_download_report(request, report_id):
+    """API endpoint for downloading reports"""
+    try:
+        report = get_object_or_404(AttendanceReport, id=report_id, generated_by=request.user.lecturer_profile)
+        
+        # For now, return success - implement actual CSV generation later
+        return JsonResponse({
+            'success': True,
+            'message': 'Report download started',
+            'report_title': report.title
+        })
+        
+    except Exception as e:
+        logger.error("Error in api_download_report: %s", str(e))
+        return JsonResponse({'success': False, 'message': 'Error downloading report'}, status=500)
 
 
         

@@ -12,6 +12,14 @@ def validate_year_of_study(value):
     if value < 1 or value > 5:
         raise ValidationError('Year of study must be between 1 and 5')
 
+def validate_phone_number(value):
+    """Validate phone number format"""
+    import re
+    # Basic phone number validation (adjust based on your country)
+    pattern = r'^\+?[1-9]\d{1,14}$'  # E.164 format
+    if not re.match(pattern, value):
+        raise ValidationError('Enter a valid phone number format')
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields):
         if not username:
@@ -60,7 +68,12 @@ class User(AbstractUser):
         default=UserType.STUDENT
     )
     email = models.EmailField(_('email address'), unique=True, blank=True, null=True)
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
+    phone_number = models.CharField(
+        max_length=15, 
+        blank=True, 
+        null=True,
+        validators=[validate_phone_number]
+    )
     profile_picture = models.ImageField(
         upload_to=user_profile_picture_path,
         default='profiles/default.png',
@@ -221,7 +234,6 @@ class Course(models.Model):
     duration_years = models.PositiveIntegerField(default=4)
     total_semesters = models.PositiveIntegerField(default=8)
     
-    # Fixed: Added the missing field that was causing the error
     credit_requirements = models.PositiveIntegerField(
         default=120,
         help_text="Total credit hours required for course completion"
@@ -556,6 +568,7 @@ class QRCode(models.Model):
     is_active = models.BooleanField(default=True)
     generated_at = models.DateTimeField(auto_now_add=True)    
     expires_at = models.DateTimeField(null=True, blank=True)
+    scan_count = models.IntegerField(default=0)  
 
     class Meta:
         db_table = 'qr_codes'
@@ -586,6 +599,11 @@ class Attendance(models.Model):
         LATE = 'LATE', _('Late')
         EXCUSED = 'EXCUSED', _('Excused')
 
+    class AttendanceMethod(models.TextChoices):
+        QR_CODE = 'QR_CODE', _('QR Code Scan')
+        MANUAL = 'MANUAL', _('Manual Entry')
+        API = 'API', _('API Integration')
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(
         StudentProfile,
@@ -614,6 +632,12 @@ class Attendance(models.Model):
     scan_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     location_valid = models.BooleanField(default=False)
     marked_by_lecturer = models.BooleanField(default=False)
+    attendance_method = models.CharField(
+        max_length=10,
+        choices=AttendanceMethod.choices,
+        default=AttendanceMethod.QR_CODE,
+        help_text="Method used to mark attendance"
+    )
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -630,7 +654,8 @@ class Attendance(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.student.registration_number} - {self.class_schedule} - {self.status}"
+        method_display = self.get_attendance_method_display()
+        return f"{self.student.registration_number} - {self.class_schedule} - {self.status} ({method_display})"
 
     def save(self, *args, **kwargs):
         if not self.scan_time and not self.marked_by_lecturer:
@@ -691,7 +716,7 @@ class SystemLog(models.Model):
         blank=True,
         related_name='system_logs'
     )
-    action_type = models.CharField(max_length=10, choices=ActionType.choices)
+    action_type = models.CharField(max_length=20, choices=ActionType.choices)
     log_level = models.CharField(max_length=10, choices=LogLevel.choices, default=LogLevel.INFO)
     description = models.TextField()
     ip_address = models.GenericIPAddressField(null=True, blank=True)
@@ -744,6 +769,8 @@ class AttendanceReport(models.Model):
     total_classes = models.PositiveIntegerField(default=0)
     total_students = models.PositiveIntegerField(default=0)
     average_attendance = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    qr_attendance_count = models.PositiveIntegerField(default=0)
+    manual_attendance_count = models.PositiveIntegerField(default=0)
     report_file = models.FileField(upload_to=report_file_path, blank=True, null=True)
     generated_at = models.DateTimeField(auto_now_add=True)
     is_generated = models.BooleanField(default=False)
@@ -758,7 +785,7 @@ class AttendanceReport(models.Model):
         return f"Report - {self.title}"
 
     def calculate_statistics(self):
-        from django.db.models import Count, Avg
+        from django.db.models import Count, Q
         
         attendances = Attendance.objects.filter(
             class_schedule__semester_unit=self.semester_unit,
@@ -767,6 +794,15 @@ class AttendanceReport(models.Model):
         
         self.total_classes = attendances.values('class_schedule').distinct().count()
         self.total_students = attendances.values('student').distinct().count()
+        
+        # Calculate method-specific counts
+        self.qr_attendance_count = attendances.filter(
+            attendance_method=Attendance.AttendanceMethod.QR_CODE
+        ).count()
+        self.manual_attendance_count = attendances.filter(
+            Q(attendance_method=Attendance.AttendanceMethod.MANUAL) |
+            Q(marked_by_lecturer=True)
+        ).count()
         
         if self.total_classes > 0 and self.total_students > 0:
             total_possible_attendances = self.total_classes * self.total_students
@@ -796,6 +832,7 @@ class StudentAttendanceSummary(models.Model):
     classes_absent = models.PositiveIntegerField(default=0)
     classes_late = models.PositiveIntegerField(default=0)
     attendance_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0.0)
+    qr_attendance_count = models.PositiveIntegerField(default=0)
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -818,6 +855,11 @@ class StudentAttendanceSummary(models.Model):
         self.classes_attended = attendances.filter(status='PRESENT').count()
         self.classes_absent = attendances.filter(status='ABSENT').count()
         self.classes_late = attendances.filter(status='LATE').count()
+        
+        # Calculate method-specific counts
+        self.qr_attendance_count = attendances.filter(
+            attendance_method=Attendance.AttendanceMethod.QR_CODE
+        ).count()
         
         if self.total_classes > 0:
             self.attendance_percentage = round(

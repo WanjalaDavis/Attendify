@@ -138,7 +138,7 @@
                     <i class="fas fa-clock"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 class="stat-value">{{ upcoming_classes }}</h3>
+                    <h3 class="stat-value">{{ upcoming_classes_count }}</h3>
                     <p class="stat-label">Upcoming Classes</p>
                     <div class="stat-trend">
                         Next: Today 2:00 PM
@@ -262,7 +262,7 @@
                     </div>
                     <div class="schedule-list">
                         {% for class in todays_classes %}
-                        <div class="schedule-item {% if class.is_ongoing %}ongoing{% endif %}" data-class-id="{{ class.id }}">
+                        <div class="schedule-item {% if class.is_ongoing_display %}ongoing{% endif %}" data-class-id="{{ class.id }}">
                             <div class="schedule-time">
                                 <div class="time-start">{{ class.start_time }}</div>
                                 <div class="time-end">{{ class.end_time }}</div>
@@ -277,7 +277,11 @@
                                     </span>
                                     <span class="meta-item">
                                         <i class="fas fa-user-tie"></i>
-                                        Dr. {{ class.lecturer.user.last_name }}
+                                        {% if class.lecturer %}
+                                            Dr. {{ class.lecturer.user.last_name }}
+                                        {% else %}
+                                            Lecturer not assigned
+                                        {% endif %}
                                     </span>
                                 </div>
                             </div>
@@ -289,7 +293,7 @@
                                         {{ class.display_status|upper }}
                                     {% endif %}
                                 </div>
-                                {% if class.is_ongoing %}
+                                {% if class.is_ongoing_display %}
                                 <div class="live-indicator">
                                     <span class="pulse-dot"></span>
                                     LIVE
@@ -383,19 +387,21 @@
             <div class="section-header">
                 <h2 class="section-title">
                     <i class="fas fa-book"></i>
-                    Enrolled Units
+                    Enrolled Units ({{ unit_enrollments|length }})
                 </h2>
                 <button class="btn btn-outline" id="viewAllUnits">
                     View All Units
                 </button>
             </div>
+            
+            {% if unit_enrollments %}
             <div class="units-grid">
-                {% for enrollment in unit_enrollments %}
+                {% for unit in unit_enrollments %}
                 <div class="unit-card">
                     <div class="unit-header">
                         <div class="unit-badge">
-                            <span class="unit-code">{{ enrollment.semester_unit.unit.code }}</span>
-                            <span class="unit-credits">{{ enrollment.semester_unit.unit.credit_hours }} Credits</span>
+                            <span class="unit-code">{{ unit.code }}</span>
+                            <span class="unit-credits">{{ unit.credit_hours }} Credits</span>
                         </div>
                         <div class="unit-actions">
                             <button class="icon-btn" title="View Details">
@@ -403,37 +409,97 @@
                             </button>
                         </div>
                     </div>
-                    <h3 class="unit-name">{{ enrollment.semester_unit.unit.name }}</h3>
+                    
+                    <h3 class="unit-name">{{ unit.name }}</h3>
+                    
                     <div class="unit-details">
                         <div class="unit-detail">
                             <i class="fas fa-user-tie"></i>
-                            <span>Dr. {{ enrollment.semester_unit.lecturer.user.last_name }}</span>
+                            <span>{{ unit.lecturer_name }}</span>
                         </div>
                         <div class="unit-detail">
                             <i class="fas fa-calendar-alt"></i>
-                            <span>{{ enrollment.semester_unit.semester.name }}</span>
+                            <span>{{ unit.semester }}</span>
+                        </div>
+                        <div class="unit-detail">
+                            <i class="fas fa-users"></i>
+                            <span>{{ unit.enrolled_students_count }} students enrolled</span>
                         </div>
                     </div>
+                    
                     <div class="unit-progress">
                         <div class="progress-header">
                             <span>Attendance</span>
-                            <span class="progress-percentage">{{ enrollment.attendance_percentage }}%</span>
+                            <span class="progress-percentage">{{ unit.attendance_percentage|floatformat:1 }}%</span>
                         </div>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: {{ enrollment.attendance_percentage }}%"></div>
+                            <div class="progress-fill" style="width: {{ unit.attendance_percentage }}%"></div>
                         </div>
                         <div class="progress-stats">
-                            <span>{{ enrollment.attended_classes }} of {{ enrollment.total_classes }} classes</span>
+                            <span>{{ unit.present_classes }} of {{ unit.total_classes }} classes</span>
                         </div>
                     </div>
                 </div>
-                {% empty %}
-                <div class="empty-state">
-                    <i class="fas fa-book"></i>
-                    <p>No units enrolled</p>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-book"></i>
+                <p>No units enrolled for current semester</p>
+                <a href="#" class="btn btn-primary">Enroll in Units</a>
+            </div>
+            {% endif %}
+        </section>
+
+        <!-- Upcoming Classes Section -->
+        <section class="units-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-calendar-week"></i>
+                    Upcoming Classes (Next 7 Days)
+                </h2>
+            </div>
+            
+            {% if upcoming_classes %}
+            <div class="classes-list">
+                {% for class in upcoming_classes %}
+                <div class="class-card">
+                    <div class="class-date">
+                        <div class="date-day">{{ class.schedule_date|date:"D" }}</div>
+                        <div class="date-number">{{ class.schedule_date|date:"d" }}</div>
+                        <div class="date-month">{{ class.schedule_date|date:"M" }}</div>
+                    </div>
+                    <div class="class-details">
+                        <h4 class="class-name">{{ class.semester_unit.unit.code }} - {{ class.semester_unit.unit.name }}</h4>
+                        <div class="class-time">
+                            <i class="fas fa-clock"></i>
+                            {{ class.start_time }} - {{ class.end_time }}
+                        </div>
+                        <div class="class-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            {{ class.venue }}
+                        </div>
+                        <div class="class-lecturer">
+                            <i class="fas fa-user-tie"></i>
+                            {% if class.lecturer %}
+                                Dr. {{ class.lecturer.user.get_full_name }}
+                            {% else %}
+                                Lecturer not assigned
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="class-actions">
+                        <button class="btn btn-outline btn-sm">Add to Calendar</button>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-calendar-times"></i>
+                <p>No upcoming classes in the next 7 days</p>
+            </div>
+            {% endif %}
         </section>
     </main>
 

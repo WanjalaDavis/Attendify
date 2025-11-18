@@ -28,10 +28,10 @@ SECRET_KEY = 'django-insecure-k@*5-dsx&c+_u&8!x1t=1)atg4fe@!&z#w#zo&3et&@1-%p41k
 DEBUG = True
 
 # ALLOWED_HOSTS = []
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '44e3c6d06ee5.ngrok-free.app']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'c232eabc954c.ngrok-free.app']
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://44e3c6d06ee5.ngrok-free.app',  
+    'https://c232eabc954c.ngrok-free.app',  
 ]
 
 
@@ -166,6 +166,9 @@ DEMO_ACCOUNTS = {
     'lecturer': {'password': 'lecturer123', 'is_lecturer': True},
     'student': {'password': 'student123', 'is_student': True},
 }
+
+AT_USERNAME = 'sandbox'  
+AT_API_KEY = 'atsk_b1f8a3571fa6195c93a48b36f89a2c8921c122967662b0d3eb4faf63662a7c0fa3143ce1'
 
 
 

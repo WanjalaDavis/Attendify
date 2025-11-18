@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 import csv
 import json
 from datetime import datetime, timedelta
+import secrets
 
 from .models import *
 
@@ -26,7 +27,12 @@ class CustomUserCreationForm(UserCreationForm):
             user.save()
             # Create corresponding profile based on user_type
             if user.is_student and not hasattr(user, 'student_profile'):
-                StudentProfile.objects.create(user=user)
+                # Generate unique registration number for student
+                registration_number = f"STU{secrets.token_hex(6).upper()}"
+                StudentProfile.objects.create(
+                    user=user, 
+                    registration_number=registration_number
+                )
             elif user.is_lecturer and not hasattr(user, 'lecturer_profile'):
                 LecturerProfile.objects.create(user=user)
             elif user.is_admin and not hasattr(user, 'admin_profile'):
@@ -46,8 +52,8 @@ class StudentProfileInline(admin.StackedInline):
     model = StudentProfile
     can_delete = False
     verbose_name_plural = 'Student Profile'
-    fields = ('registration_number', 'year_of_study', 'is_active')
-    readonly_fields = ('enrollment_date', 'created_at', 'updated_at')
+    fields = ('registration_number', 'year_of_study', 'is_active', 'enrollment_date')
+    readonly_fields = ('created_at', 'updated_at', 'enrollment_date')
     extra = 0
 
 
@@ -119,12 +125,17 @@ class CustomUserAdmin(UserAdmin):
     full_name.short_description = 'Full Name'
     
     def save_model(self, request, obj, form, change):
-        """Auto-create profile when user is created"""
+        """Auto-create profile when user is created with proper registration numbers"""
         super().save_model(request, obj, form, change)
-        
+    
         if not change:  # Only for new users
             if obj.is_student and not hasattr(obj, 'student_profile'):
-                StudentProfile.objects.create(user=obj)
+                # Generate unique registration number for student
+                registration_number = f"STU{secrets.token_hex(6).upper()}"
+                StudentProfile.objects.create(
+                    user=obj,
+                    registration_number=registration_number
+                )
             elif obj.is_lecturer and not hasattr(obj, 'lecturer_profile'):
                 LecturerProfile.objects.create(user=obj)
             elif obj.is_admin and not hasattr(obj, 'admin_profile'):
@@ -211,8 +222,8 @@ class StudentProfileAdmin(admin.ModelAdmin, QuickUserCreationMixin):
     list_display = ('registration_number', 'user_link', 'year_of_study', 'enrollment_date', 'is_active', 'attendance_rate', 'enrollments_count')
     list_filter = ('year_of_study', 'is_active', 'enrollment_date', 'created_at')
     search_fields = ('registration_number', 'user__username', 'user__first_name', 'user__last_name')
-    readonly_fields = ('created_at', 'updated_at', 'attendance_rate', 'enrollment_date', 'enrollments_count')
-    actions = ['activate_students', 'deactivate_students', 'create_user_accounts']
+    readonly_fields = ('created_at', 'updated_at', 'attendance_rate', 'enrollment_date', 'enrollments_count', 'registration_number')
+    actions = ['activate_students', 'deactivate_students', 'create_user_accounts', 'generate_registration_numbers']
     
     fieldsets = (
         (None, {'fields': ('user', 'registration_number')}),
@@ -246,6 +257,12 @@ class StudentProfileAdmin(admin.ModelAdmin, QuickUserCreationMixin):
     user_link.short_description = 'User Account'
     user_link.admin_order_field = 'user__username'
     
+    def save_model(self, request, obj, form, change):
+        """Ensure registration_number is set before saving"""
+        if not obj.registration_number:
+            obj.registration_number = f"STU{secrets.token_hex(6).upper()}"
+        super().save_model(request, obj, form, change)
+    
     @admin.action(description='Activate selected students')
     def activate_students(self, request, queryset):
         updated = queryset.update(is_active=True)
@@ -255,6 +272,16 @@ class StudentProfileAdmin(admin.ModelAdmin, QuickUserCreationMixin):
     def deactivate_students(self, request, queryset):
         updated = queryset.update(is_active=False)
         self.message_user(request, f'{updated} students deactivated successfully.', messages.SUCCESS)
+    
+    @admin.action(description='Generate registration numbers for selected')
+    def generate_registration_numbers(self, request, queryset):
+        updated_count = 0
+        for student in queryset:
+            if not student.registration_number:
+                student.registration_number = f"STU{secrets.token_hex(6).upper()}"
+                student.save()
+                updated_count += 1
+        self.message_user(request, f'Generated registration numbers for {updated_count} students.', messages.SUCCESS)
 
 
 # Enhanced Lecturer Profile Admin

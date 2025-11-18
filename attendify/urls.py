@@ -73,12 +73,9 @@ urlpatterns = [
     path("admin/assignments/", views.assign_unit_lecturer, name="assign_unit_lecturer"),
     path("admin/system-logs/", views.system_logs, name="system_logs"),
 
-    path("profile/", views.profile_page, name="profile_page"),
-
-
+    path("profile/", views.profile_page, name="profile_page"),   
    
     path("api/system-stats/", views.api_system_stats, name="api_system_stats"),
-    # path("api/scan-qr/", views.scan_qr_code, name="scan_qr_code"),
     path("api/student/<uuid:student_id>/attendance/", views.api_student_attendance, name="api_student_attendance"),
     
     # Class attendance - FIXED: Using string instead of UUID to match JavaScript
@@ -103,6 +100,15 @@ urlpatterns = [
 
     
     path("api/lecturer/dashboard-data/", views.api_lecturer_dashboard_data, name="api_lecturer_dashboard_data"),
+
+    path('api/lecturer/class-attendance/<uuid:class_id>/', views.api_class_attendance_detail, name='api_class_attendance'),
+    path('api/lecturer/mark-manual-attendance/', views.api_mark_manual_attendance, name='api_mark_manual_attendance'),
+    path('api/lecturer/generate-report/', views.api_generate_report, name='api_generate_report'),
+    path('api/lecturer/reports/', views.api_lecturer_reports_list, name='api_lecturer_reports'),
+    path('api/lecturer/download-report/<uuid:report_id>/', views.api_download_report, name='api_download_report'),
+    path('api/lecturer/units/', views.api_lecturer_units, name='api_lecturer_units'),
+    path('api/lecturer/unit-analytics/<uuid:unit_id>/', views.api_unit_analytics, name='api_unit_analytics'),
+    path('api/lecturer/recent-attendance/', views.api_lecturer_recent_attendance, name='api_lecturer_recent_attendance'),
 
 
     # API endpoints for charts and data
